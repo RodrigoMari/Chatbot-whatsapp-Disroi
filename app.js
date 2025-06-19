@@ -3,22 +3,30 @@ const twilio = require('./twilio.js'); // reemplazá por la ruta real
 
 const app = express();
 
-const reclamoSolicitudTemplate = "HX0a29c1e90c3f9f28c4d667882bb83aee"
-const reclamoTemplate = "HX6368673c4fd5308f6949a0007a41005e"
-const solicitudTemplate = "HX55fc81ba3fdd0029b3038dbb5664b9e9"
+const main = "HX5cf55ca0144c76785d0a478483a3b49f"
+const reclamoTemplate = "HX4f0a92516ed5057531bc858c1da18804"
+const pedidoTemplate = "HX25d7f54ba8b3d54d947652ffac9b8703"
 
 app.use(express.urlencoded({ extended: true }));
 
 app.post('/webhook', async (req, res) => {
     console.log("req ->", req.body);
     const body = req.body.Body.trim().toLowerCase();
-    if (body == 'si (amo a taylor)') {
-        twilio.sendListPicker("5493412774846", reclamoTemplate);
-    } else if (body == 'no (odio a taylor)') {
-        twilio.sendListPicker("5493412774846", solicitudTemplate);
-    } else {
-        twilio.sendListPicker("5493412774846", reclamoSolicitudTemplate);
+    if (body == 'reclamos') {
+        twilio.sendListPicker(req.body.WaId, reclamoTemplate);
+    } else if (body == 'pedidos') {
+        twilio.sendListPicker(req.body.WaId, pedidoTemplate);
+    } else if (req.body.MessageType != 'interactive') {
+        twilio.sendListPicker(req.body.WaId, main);
     }
+
+    const title = req.body.ListTitle.trim().toLowerCase();
+    switch (title) {
+        case 'volver al menú anterior':
+            twilio.sendListPicker(req.body.WaId, main);
+            break;
+    }
+
 });
 
 app.listen(3000, () => {
