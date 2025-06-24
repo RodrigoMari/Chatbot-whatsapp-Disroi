@@ -1,5 +1,6 @@
 const express = require('express');
 const twilio = require('./twilio.js'); // reemplazá por la ruta real
+const { ListItem } = require('twilio/lib/rest/content/v1/content.js');
 
 const estados = {};
 const app = express();
@@ -15,6 +16,7 @@ const noLlegó = "HX0cba42d4b6fdc98e57f029ad7df3b574"
 app.use(express.urlencoded({ extended: true }));
 
 app.post('/webhook', async (req, res) => {
+    const termino = 0;
     const waId = req.body.WaId;
     const body = req.body.Body;
     const ListTitle = req.body.ListTitle;
@@ -47,14 +49,40 @@ app.post('/webhook', async (req, res) => {
     //reclamos
     switch (ListTitle) {
         case 'No llegó mi pedido':
+            //pedir num de facturacion y cod cliente
             twilio.sendListPicker(waId, noLlegó);
             break;
+        case 'Me falta un producto':
+            //pedir num de facturacion y cod cliente
+            twilio.sendListPicker(waId, noLlegó);
+            break;
+        case 'Mi vendedor no me visitó':
+            //avisarle al vendedor directamente que hay que visitarlo de manera urgente
+            break
         case 'Diferencia en CC':
-            twilio.sendMessage(waId, "Por favor, escribinos una observación sobre lo ocurrido.");
+            twilio.sendMessage(waId, "Por favor, escribe una observación sobre lo ocurrido. Cualquier información adicional es bienvenida.");
             estados[waId] = 'esperando_observacion';
+            break;
+        case 'Solicitud NDC':
+            //avisarle al vendedor directamente que no se hizo la nota de crédito
+            break;
+        case 'Requiero atención':
+            //debido a la alta demanda, no puedo asegurar que el supervisor se contacte contigo. Le recomiendo
+            //comunicarse con el vendedor
             break;
     }
 
+    switch (ListTitle) {
+        case 'Tokin':
+            twilio.sendMessage(waId, "Para llevar a cabo su pedido por *Tokin*, visite la tienda oficial de *Disroi*: https://www.tokintienda.com/");
+            break;
+        case 'Manual':
+            twilio.sendMessage(waId, "Para llevar a cabo su pedido de manera *Manual* puede comunicarse con su vendedor designado. ¿Requiere su contacto?");
+            break;
+        case 'Ver ofertas':
+            //Mostrar ofertas
+            break;
+    }
     //volver al menu principal
     switch (title) {
         case 'Volver al menú anterior':
