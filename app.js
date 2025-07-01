@@ -1,7 +1,9 @@
 const express = require('express');
 const twilio = require('./twilio.js'); // reemplazá por la ruta real
 const { ListItem } = require('twilio/lib/rest/content/v1/content.js');
+const { PrismaClient } = require('@prisma/client');
 
+const prisma = new PrismaClient();
 const estados = {};
 const app = express();
 
@@ -16,14 +18,26 @@ const noLlegó = "HX0cba42d4b6fdc98e57f029ad7df3b574"
 app.use(express.urlencoded({ extended: true }));
 
 app.post('/webhook', async (req, res) => {
-    const termino = 0;
+    //const termino = 0;
     const waId = req.body.WaId;
     const body = req.body.Body;
     const ListTitle = req.body.ListTitle;
     const title = req.body.ListTitle;
 
-    if (estados[waId] === 'esperando_observacion') {
+    if (estados[waId]?.paso === 'esperando_observacion') {
+        const datos = estados[waId];
         console.log("Observación recibida:", body);
+        
+        await prisma.reclamo.create({
+        data: {
+            cliente: waId,
+            tipo: datos.tipo,
+            area: datos.area,
+            cod_factura: datos.cod_factura,
+            estado: false,
+            observacion: body,
+        }
+        });
         delete estados[waId];
         return;
     }
@@ -31,6 +45,10 @@ app.post('/webhook', async (req, res) => {
     //main
     if (req.body.MessageType != 'interactive') {
         twilio.sendListPicker(waId, main);
+
+        if(req.body.Body === 'lechuza') {
+            twilio.sendMessage(waId, "piashins piashins");
+        }
     }
 
     //1er seccion
@@ -58,10 +76,15 @@ app.post('/webhook', async (req, res) => {
             break;
         case 'Mi vendedor no me visitó':
             //avisarle al vendedor directamente que hay que visitarlo de manera urgente
-            break
+            break;
         case 'Diferencia en CC':
             twilio.sendMessage(waId, "Por favor, escribe una observación sobre lo ocurrido. Cualquier información adicional es bienvenida.");
-            estados[waId] = 'esperando_observacion';
+            estados[waId] = {
+                paso: 'esperando_observacion',
+                tipo: ListTitle,
+                cod_factura: 'FAC12345',
+                area: 'Administracion'
+            };
             break;
         case 'Solicitud NDC':
             //avisarle al vendedor directamente que no se hizo la nota de crédito
