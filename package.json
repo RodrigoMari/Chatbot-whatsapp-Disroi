@@ -5,6 +5,6 @@
     "twilio": "^5.7.1"
   },
   "devDependencies": {
-    "prisma": "^6.10.1"
+    "prisma": "^6.11.0"
   }
 }

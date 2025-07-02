@@ -24,7 +24,7 @@ app.post('/webhook', async (req, res) => {
     const ListTitle = req.body.ListTitle;
     const title = req.body.ListTitle;
 
-    if (estados[waId]?.paso === 'esperando_observacion') {
+    if (estados[waId]?.paso === 'esperando') {
         const datos = estados[waId];
         console.log("Observación recibida:", body);
         
@@ -44,11 +44,13 @@ app.post('/webhook', async (req, res) => {
 
     //main
     if (req.body.MessageType != 'interactive') {
-        twilio.sendListPicker(waId, main);
+        
 
         if(req.body.Body === 'lechuza') {
             twilio.sendMessage(waId, "piashins piashins");
         }
+        else
+            twilio.sendListPicker(waId, main);
     }
 
     //1er seccion
@@ -80,7 +82,7 @@ app.post('/webhook', async (req, res) => {
         case 'Diferencia en CC':
             twilio.sendMessage(waId, "Por favor, escribe una observación sobre lo ocurrido. Cualquier información adicional es bienvenida.");
             estados[waId] = {
-                paso: 'esperando_observacion',
+                paso: 'esperando',
                 tipo: ListTitle,
                 cod_factura: 'FAC12345',
                 area: 'Administracion'
