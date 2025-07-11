@@ -133,6 +133,7 @@ app.post('/webhook', async (req, res) => {
             case 'Diferencia en CC':
                 twilio.sendMessage(waId, "Por favor, escribe una observación sobre lo ocurrido. Cualquier información adicional es bienvenida.");
                 estados[waId] = {
+
                     ...estados[waId],
                     paso: 'guardar',
                     tipo: ListTitle,
