@@ -9,6 +9,21 @@ const prisma = new PrismaClient();
 const estados = {};
 const app = express();
 
+const path = require('path');
+
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'dashboard'));
+app.use(express.static(path.join(__dirname, 'dashboard')));
+const reclamosRouter = require('./dashboard/reclamos');
+app.use('/reclamos', reclamosRouter);
+
+
+const PORT = 5000;
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
 const main = "HX5cf55ca0144c76785d0a478483a3b49f"
 
 const reclamo = "HX4f0a92516ed5057531bc858c1da18804"
@@ -76,19 +91,26 @@ app.post('/webhook', async (req, res) => {
     if (estados[waId]?.paso === 'guardar') {
         const datos = estados[waId];
         console.log("Observación recibida:", body);
+
+        try {
+            await prisma.reclamo.create({
+                data: {
+                    cliente: datos.cliente_id,
+                    tipo: datos.tipo,
+                    area: datos.area,
+                    cod_factura: datos.cod_factura,
+                    estado: false,
+                    observacion: body,
+                }
+            });
+
+            delete estados[waId];
+            return;
+        } catch (error) {
+            console.error('Error al guardar reclamo:', error);
+            await twilio.sendMessage(waId, "Ocurrió un error al guardar su reclamo. Por favor, intente nuevamente.");
+        }
         
-        await prisma.reclamo.create({
-            data: {
-                cliente: datos.cliente_id,
-                tipo: datos.tipo,
-                area: datos.area,
-                cod_factura: datos.cod_factura,
-                estado: false,
-                observacion: body,
-            }
-        });
-        delete estados[waId];
-        return;
     }
 
     //Flujo principal
@@ -131,7 +153,7 @@ app.post('/webhook', async (req, res) => {
                 //avisarle al vendedor directamente que hay que visitarlo de manera urgente
                 break;
             case 'Diferencia en CC':
-                twilio.sendMessage(waId, "Por favor, escribe una observación sobre lo ocurrido. Cualquier información adicional es bienvenida.");
+                twilio.sendMessage(waId, "Por favor, escribe una observación sobre lo ocurrido (máximo 300 caracteres). Cualquier información adicional es bienvenida.");
                 estados[waId] = {
 
                     ...estados[waId],
@@ -168,7 +190,6 @@ app.post('/webhook', async (req, res) => {
                 break;
         }
     }
-
 });
 
 app.listen(3000, () => {

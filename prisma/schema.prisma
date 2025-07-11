@@ -15,7 +15,7 @@ model reclamo {
   area         String?          @default("")
   cod_factura  String?
   estado       Boolean?
-  observacion  String?
+  observacion  String?          @db.VarChar(300)
   maestro_21   maestro_cliente? @relation(fields: [cliente], references: [codigo], onDelete: Restrict, onUpdate: Restrict, map: "fk_cliente_codigo")
 
   @@index([cliente], map: "fk_cliente_codigo")

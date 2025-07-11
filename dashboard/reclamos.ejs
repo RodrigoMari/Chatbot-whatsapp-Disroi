@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gestión de Reclamos</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <h1>Gestión de Reclamos</h1>
+  <table role="table" aria-label="Lista de reclamos">
+    <thead>
+      <tr>
+        <th>ID</th><th>Cliente</th><th>Tipo</th><th>Área</th>
+        <th>Factura</th><th>Observación</th><th>Estado</th><th>Acción</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% reclamos.forEach(r => { %>
+        <tr>
+          <td><%= r.id %></td>
+          <td><%= r.cliente %></td>
+          <td><%= r.tipo %></td>
+          <td><%= r.area %></td>
+          <td><%= r.cod_factura %></td>
+          <td><%= r.observacion %></td>
+          <td style="text-align:center"><%= r.estado ? "✅" : "⏳" %></td>
+          <td>
+            <% if (!r.estado) { %>
+              <form method="POST" action="/reclamos/resolver/<%= r.id %>">
+                <button type="submit" aria-label="Marcar reclamo <%= r.id %> como resuelto">
+                  Marcar como resuelto
+                </button>
+              </form>
+            <% } else { %>
+              —
+            <% } %>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</body>
+</html>
