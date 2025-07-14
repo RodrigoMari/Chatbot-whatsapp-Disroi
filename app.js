@@ -24,7 +24,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
 
-const main = "HX5cf55ca0144c76785d0a478483a3b49f"
+const main = "HX6870b1d969384339885c8fa36ad104b0"
 
 const reclamo = "HX4f0a92516ed5057531bc858c1da18804"
 const pedido = "HX25d7f54ba8b3d54d947652ffac9b8703"
@@ -43,7 +43,7 @@ async function identificarUsuario(waId, body) {
         }
         const cliente = await prisma.maestro_cliente.findFirst({where: {codigo: codigoCeros}});
         if (cliente){
-            await twilio.sendMessage(waId, `Hola ${cliente.nombre}`);
+            //await twilio.sendMessage(waId, `Hola ${cliente.nombre}`);
             estados[waId] = { identificado: true, cliente_id: cliente.codigo };
         }
     }
@@ -56,7 +56,7 @@ async function identificarUsuario(waId, body) {
             OR SUBSTRING_INDEX(SUBSTRING_INDEX(cuit, '-', 2), '-', -1) = ${dniIngresado}
         `;
         if (cliente.length > 0) {
-            await twilio.sendMessage(waId, `Hola ${cliente[0].nombre}`);
+            //await twilio.sendMessage(waId, `Hola ${cliente[0].nombre}`);
             estados[waId] = { identificado: true, cliente_id: cliente[0].codigo };
         }
     }
@@ -123,7 +123,12 @@ app.post('/webhook', async (req, res) => {
                 twilio.sendMessage(waId, "piashins piashins");
             }
             else
-                twilio.sendListPicker(waId, main);
+                prisma.maestro_cliente.findFirst({where: { codigo: estados[waId].cliente_id }
+                    }).then(async cliente => {
+                        if (cliente) {
+                            await twilio.sendListPicker(waId, main, {1: cliente.nombre});
+                        }
+                    });
         }
 
         //1er seccion

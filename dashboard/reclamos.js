@@ -6,6 +6,8 @@ const prisma = new PrismaClient();
 router.get('/', async (req, res) => {
   const reclamos = await prisma.reclamo.findMany({
     orderBy: { id: 'desc' },
+    where: { estado: false },
+    include: { maestro_21: true },
   });
   res.render('reclamos', { reclamos });
 });

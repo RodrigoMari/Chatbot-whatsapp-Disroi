@@ -17,12 +17,13 @@ async function sendMessage(sender, message) {
   }
 }
 
-async function sendListPicker(to, template) {
+async function sendListPicker(to, template, variables) {
   try {
     const msg = await client.messages.create({
       to: 'whatsapp:+' + to,
       from: 'whatsapp:+14155238886',
       contentSid: template,
+      contentVariables: JSON.stringify(variables),
     });
     console.log('Enviado:', msg.sid);
   } catch (err) {

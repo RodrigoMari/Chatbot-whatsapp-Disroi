@@ -11,7 +11,7 @@
   <table role="table" aria-label="Lista de reclamos">
     <thead>
       <tr>
-        <th>ID</th><th>Cliente</th><th>Tipo</th><th>Área</th>
+        <th>ID</th><th>Código</th><th>Nombre</th><th>Tipo</th><th>Área</th>
         <th>Factura</th><th>Observación</th><th>Estado</th><th>Acción</th>
       </tr>
     </thead>
@@ -20,6 +20,7 @@
         <tr>
           <td><%= r.id %></td>
           <td><%= r.cliente %></td>
+          <td><%= r.maestro_21?.nombre || "sin nombre" %></td>
           <td><%= r.tipo %></td>
           <td><%= r.area %></td>
           <td><%= r.cod_factura %></td>
