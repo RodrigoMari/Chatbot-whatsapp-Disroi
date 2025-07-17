@@ -14,7 +14,7 @@ model reclamo {
   tipo         String?          @default("")
   area         String?          @default("")
   cod_factura  String?
-  estado       Boolean?
+  estado       reclamo_estado?  @default(PENDIENTE)
   observacion  String?          @db.VarChar(300)
   maestro_21   maestro_cliente? @relation(fields: [cliente], references: [codigo], onDelete: Restrict, onUpdate: Restrict, map: "fk_cliente_codigo")
 
@@ -32,4 +32,11 @@ model maestro_cliente {
   estado     String?   @db.VarChar(10)
   telefono   String?   @db.VarChar(20)
   reclamo    reclamo[]
+}
+
+enum reclamo_estado {
+  PENDIENTE
+  EN_PROCESO
+  COMPLETADO
+  EMPTY_ENUM_VALUE @map("")
 }

@@ -99,7 +99,7 @@ app.post('/webhook', async (req, res) => {
                     tipo: datos.tipo,
                     area: datos.area,
                     cod_factura: datos.cod_factura,
-                    estado: false,
+                    estado: 'PENDIENTE',
                     observacion: body,
                 }
             });
@@ -169,6 +169,7 @@ app.post('/webhook', async (req, res) => {
                 };
                 break;
             case 'Solicitud NDC':
+                //pedir codigos de productos para hacer la nota de credito
                 //avisarle al vendedor directamente que no se hizo la nota de crédito
                 break;
             case 'Requiero atención':

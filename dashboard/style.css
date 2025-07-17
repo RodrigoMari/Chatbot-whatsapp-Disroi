@@ -5,6 +5,11 @@ body {
   color: #333;
 }
 
+
+.container {
+  max-width: 100%; /* O cambia a container-fluid en el HTML */
+}
+
 h1 {
   text-align: center;
   margin-bottom: 20px;
@@ -12,6 +17,9 @@ h1 {
 }
 
 table {
+  max-width: 100%;
+  table-layout: fixed; /* Importante: limita el ancho de las columnas */
+  word-wrap: break-word; /* permite que las palabras largas se rompan */
   border-collapse: separate;
   border-spacing: 0;
   width: 100%;
@@ -21,23 +29,52 @@ table {
   overflow: hidden;
 }
 
-th, td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid #ddd;
+
+tbody td:nth-child(7) {
+  max-width: 300px; /* ajusta según prefieras */
+  white-space: normal; /* permite salto de línea */
+  overflow-wrap: break-word;
 }
 
+/* th */
 th {
   background-color: #007bff;
   color: white;
   font-weight: 600;
   text-transform: uppercase;
+  text-align: center;
+  vertical-align: middle;
 }
 
+/* td */
+td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+td.estado {
+  text-align: center;
+  vertical-align: middle;
+}
+
+td.estado .badge {
+  font-size: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  border-radius: 0.75rem;
+  line-height: 1;
+}
+
+/* tr */
 tr:nth-child(even) {
   background-color: #f7f9fc;
 }
 
+/* button */
 button {
   background-color: #28a745;
   border: none;
@@ -59,4 +96,80 @@ td:last-child {
 
 form {
   margin: 0;
+}
+
+/* Popup base */
+.popup-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+}
+
+.popup-content {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 500px;
+  width: 90%;
+  position: relative;
+}
+
+/* Botones */
+.popup-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.popup-buttons form {
+  flex: 1 1 22%;
+  min-width: 120px;
+}
+
+.btn-completado {
+  background-color: #28a745;
+  color: white;
+}
+
+.btn-proceso {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-pendiente {
+  background-color: #fd7e14;
+  color: white;
+}
+
+.btn-cancelar {
+  background-color: #6c757d;
+  color: white;
+}
+
+.popup-buttons button {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+/* Efecto hover negro */
+.popup-buttons button:hover {
+  background-color: #000;
+  color: #fff;
 }
