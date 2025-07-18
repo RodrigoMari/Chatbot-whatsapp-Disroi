@@ -165,7 +165,7 @@ app.post('/webhook', async (req, res) => {
                     paso: 'guardar',
                     tipo: ListTitle,
                     cod_factura: 'FAC12345',
-                    area: 'Administracion'
+                    area: 'ADMINISTRACION'
                 };
                 break;
             case 'Solicitud NDC':

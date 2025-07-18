@@ -173,3 +173,16 @@ form {
   background-color: #000;
   color: #fff;
 }
+
+/*Filtros*/
+.form-select {
+  width: 180px;
+  padding: 8px 16px;
+  border: 1px solid #000000;
+  border-radius: 2rem;
+}
+
+.form-select:focus {
+  border-color: #0004ff;
+  box-shadow: 0 0 0 0.2rem rgb(0, 91, 189);
+}

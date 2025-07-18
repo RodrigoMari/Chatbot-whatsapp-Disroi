@@ -1,11 +1,11 @@
 {
   "dependencies": {
-    "@prisma/client": "^6.10.1",
+    "@prisma/client": "^6.12.0",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
     "twilio": "^5.7.1"
   },
   "devDependencies": {
-    "prisma": "^6.11.0"
+    "prisma": "^6.12.0"
   }
 }

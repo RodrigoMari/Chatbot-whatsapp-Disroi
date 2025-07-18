@@ -12,6 +12,24 @@
   <div class="container my-5">
     <h1 class="text-center fw-bold mb-4">Gestión de Reclamos</h1>
 
+    <!-- Filtro de estado -->
+    <form method="GET" action="/reclamos" class="d-flex justify-content-end mb-4">
+      <select class="form-select filtro-estado" name="estado" onchange="this.form.submit()">
+        <option value="">Todos los estados</option>
+        <option value="PENDIENTE" <%= estadoSeleccionado === 'PENDIENTE' ? 'selected' : '' %>>PENDIENTE</option>
+        <option value="EN_PROCESO" <%= estadoSeleccionado === 'EN_PROCESO' ? 'selected' : '' %>>EN PROCESO</option>
+        <option value="COMPLETADO" <%= estadoSeleccionado === 'COMPLETADO' ? 'selected' : '' %>>COMPLETADO</option>
+      </select>
+
+    <!-- Filtro de area -->
+      <select class="form-select filtro-area" name="area" onchange="this.form.submit()">
+        <option value="">Todas las áreas</option>
+        <option value="VENTAS" <%= areaSeleccionada === 'VENTAS' ? 'selected' : '' %>>VENTAS</option>
+        <option value="DEPOSITO" <%= areaSeleccionada === 'DEPOSITO' ? 'selected' : '' %>>DEPOSITO</option>
+        <option value="ADMINISTRACION" <%= areaSeleccionada === 'ADMINISTRACION' ? 'selected' : '' %>>ADMINISTRACION</option>
+      </select>
+    </form>
+
     <div class="table-responsive">
       <table class="table table-bordered table-hover bg-white align-middle text-center">
         <thead class="table-primary text-uppercase">

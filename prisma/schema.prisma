@@ -12,7 +12,7 @@ model reclamo {
   fecha_tiempo DateTime         @default(now())
   cliente      String?          @db.VarChar(10)
   tipo         String?          @default("")
-  area         String?          @default("")
+  area         reclamo_area?
   cod_factura  String?
   estado       reclamo_estado?  @default(PENDIENTE)
   observacion  String?          @db.VarChar(300)
@@ -38,5 +38,12 @@ enum reclamo_estado {
   PENDIENTE
   EN_PROCESO
   COMPLETADO
+  EMPTY_ENUM_VALUE @map("")
+}
+
+enum reclamo_area {
+  ADMINISTRACION
+  VENTAS
+  DEPOSITO
   EMPTY_ENUM_VALUE @map("")
 }

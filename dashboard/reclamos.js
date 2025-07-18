@@ -4,9 +4,22 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 router.get('/', async (req, res) => {
+  const estado = req.query.estado;
+  const area = req.query.area;
+
+  const filtro = {};
+
+  if (estado) {
+    filtro.estado = estado;
+  }
+
+  if (area) {
+    filtro.area = area;
+  }
+
   const reclamos = await prisma.reclamo.findMany({
     orderBy: { id: 'desc' },
-    where: { estado: { in: ['PENDIENTE', 'EN_PROCESO'] } },
+    where: filtro,
     include: { maestro_21: true },
   });
   
@@ -17,7 +30,11 @@ router.get('/', async (req, res) => {
     cod_factura: typeof r.cod_factura === 'bigint' ? r.cod_factura.toString() : r.cod_factura,
   }));
 
-  res.render('reclamos', { reclamos: reclamosSerializados });
+   res.render('reclamos', {
+    reclamos: reclamosSerializados,
+    estadoSeleccionado: estado,
+    areaSeleccionada: area
+  });
 });
 
 router.post('/resolver/:id', async (req, res) => {
