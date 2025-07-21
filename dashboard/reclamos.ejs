@@ -30,6 +30,23 @@
       </select>
     </form>
 
+    <!-- Leyenda de estados por tardanza -->
+    <div class="mb-3 d-flex align-items-center gap-3">
+      <span class="fw-bold">Tardanza:</span>
+      <span class="d-inline-flex align-items-center">
+        <span style="display:inline-block;width:18px;height:18px;background:#fd7e14;border-radius:4px;margin-right:6px;border:1px solid #fd7e14;"></span>
+        24h
+      </span>
+      <span class="d-inline-flex align-items-center">
+        <span style="display:inline-block;width:18px;height:18px;background:#fd1e34;border-radius:4px;margin-right:6px;border:1px solid #fd1e34;"></span>
+        48h
+      </span>
+      <span class="d-inline-flex align-items-center">
+        <span style="display:inline-block;width:18px;height:18px;background:#a70000;border-radius:4px;margin-right:6px;border:1px solid #a70000;"></span>
+        72h
+      </span>
+    </div>
+
     <div class="table-responsive">
       <table class="table table-bordered table-hover bg-white align-middle text-center">
         <thead class="table-primary text-uppercase">
@@ -47,19 +64,16 @@
           </tr>
         </thead>
         <tbody>
-          <% reclamos.forEach(r => { 
-            let truncatedText = r.observacion.slice(0, 30);
-            if (r.observacion.length > 30) truncatedText += "...";
-          %>
+          <% reclamos.forEach(function(r) { %>
             <tr>
-              <td><%= new Date(r.fecha_tiempo).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }) %></td>
+              <td class="<%= r.filaClase %>"><%= new Date(r.fecha_tiempo).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }) %></td>
               <td><%= r.id %></td>
               <td><%= r.cliente %></td>
               <td><%= r.maestro_21?.nombre || "sin nombre" %></td>
               <td><%= r.tipo %></td>
               <td><%= r.area %></td>
               <td><%= r.cod_factura %></td>
-              <td class="text-start" style="max-width: 200px; word-break: break-word;"><%= truncatedText %></td>
+              <td><%= r.observacion %></td>
               <td class="estado">
                 <% if (r.estado === 'COMPLETADO') { %>
                   <span class="badge bg-success">✅</span>
@@ -122,7 +136,7 @@
       document.getElementById("popup-tipo").textContent = r.tipo;
       document.getElementById("popup-area").textContent = r.area;
       document.getElementById("popup-factura").textContent = r.cod_factura;
-      document.getElementById("popup-observacion").textContent = r.observacion;
+      document.getElementById("popup-observacion").textContent = r.observacion_completa;
 
       document.getElementById("popup-form-completado").action = "/reclamos/resolver/" + r.id;
       document.getElementById("popup-form-en-proceso").action = "/reclamos/en_proceso/" + r.id;

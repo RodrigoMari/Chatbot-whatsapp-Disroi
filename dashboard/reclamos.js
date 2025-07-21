@@ -7,6 +7,7 @@ router.get('/', async (req, res) => {
   const estado = req.query.estado;
   const area = req.query.area;
 
+  //filtros
   const filtro = {};
 
   if (estado) {
@@ -23,12 +24,30 @@ router.get('/', async (req, res) => {
     include: { maestro_21: true },
   });
   
-  const reclamosSerializados = reclamos.map(r => ({
-    ...r,
-    id: r.id.toString(),
-    cliente: typeof r.cliente === 'bigint' ? r.cliente.toString() : r.cliente,
-    cod_factura: typeof r.cod_factura === 'bigint' ? r.cod_factura.toString() : r.cod_factura,
-  }));
+  const now = new Date();
+
+  const reclamosSerializados = reclamos.map(r => {
+    let truncatedText = r.observacion.slice(0, 30);
+    if (r.observacion.length > 30) truncatedText += "...";
+
+    const reclamoFecha = new Date(r.fecha_tiempo);
+    const diffHoras = Math.floor((now - reclamoFecha) / (1000 * 60 * 60));
+
+    let filaClase = '';
+    if (diffHoras > 72 && r.estado !== 'COMPLETADO') filaClase = 'bg-dark-red text-white';
+    else if (diffHoras > 48 && r.estado !== 'COMPLETADO') filaClase = 'bg-red';
+    else if (diffHoras > 24 && r.estado !== 'COMPLETADO') filaClase = 'bg-yellow';
+
+    return {
+      ...r,
+      id: r.id.toString(),
+      cliente: typeof r.cliente === 'bigint' ? r.cliente.toString() : r.cliente,
+      cod_factura: typeof r.cod_factura === 'bigint' ? r.cod_factura.toString() : r.cod_factura,
+      observacion: truncatedText,
+      observacion_completa: r.observacion,
+      filaClase
+    };
+  });
 
    res.render('reclamos', {
     reclamos: reclamosSerializados,
