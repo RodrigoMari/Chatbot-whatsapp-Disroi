@@ -12,11 +12,11 @@ model reclamo {
   fecha_tiempo DateTime         @default(now())
   cliente      String?          @db.VarChar(10)
   tipo         String?          @default("")
-  area         reclamo_area?
-  cod_factura  String?
+  cod_factura  Int?
   estado       reclamo_estado?  @default(PENDIENTE)
   observacion  String?          @db.VarChar(300)
   maestro_21   maestro_cliente? @relation(fields: [cliente], references: [codigo], onDelete: Restrict, onUpdate: Restrict, map: "fk_cliente_codigo")
+  reclamo_area reclamo_area[]
 
   @@index([cliente], map: "fk_cliente_codigo")
 }
@@ -34,16 +34,18 @@ model maestro_cliente {
   reclamo    reclamo[]
 }
 
+model reclamo_area {
+  id         Int     @id @default(autoincrement())
+  reclamo_Id BigInt
+  area       String  @db.VarChar(50)
+  reclamo    reclamo @relation(fields: [reclamo_Id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "reclamo_area_ibfk_1")
+
+  @@index([reclamo_Id], map: "reclamoId")
+}
+
 enum reclamo_estado {
   PENDIENTE
   EN_PROCESO
   COMPLETADO
-  EMPTY_ENUM_VALUE @map("")
-}
-
-enum reclamo_area {
-  ADMINISTRACION
-  VENTAS
-  DEPOSITO
   EMPTY_ENUM_VALUE @map("")
 }

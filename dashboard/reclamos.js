@@ -3,6 +3,12 @@ const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+function serializeBigInt(obj) {
+  return JSON.parse(JSON.stringify(obj, (key, value) =>
+    typeof value === 'bigint' ? value.toString() : value
+  ));
+}
+
 router.get('/', async (req, res) => {
   const estado = req.query.estado;
   const area = req.query.area;
@@ -15,13 +21,20 @@ router.get('/', async (req, res) => {
   }
 
   if (area) {
-    filtro.area = area;
+    filtro.reclamo_area = {
+      some: {
+        area: area
+      }
+    };
   }
 
   const reclamos = await prisma.reclamo.findMany({
     orderBy: { id: 'desc' },
     where: filtro,
-    include: { maestro_21: true },
+    include: { 
+      maestro_21: true,
+      reclamo_area: true
+     },
   });
   
   const now = new Date();
@@ -38,11 +51,9 @@ router.get('/', async (req, res) => {
     else if (diffHoras > 48 && r.estado !== 'COMPLETADO') filaClase = 'bg-red';
     else if (diffHoras > 24 && r.estado !== 'COMPLETADO') filaClase = 'bg-yellow';
 
+    const rSerialized = serializeBigInt(r);
     return {
-      ...r,
-      id: r.id.toString(),
-      cliente: typeof r.cliente === 'bigint' ? r.cliente.toString() : r.cliente,
-      cod_factura: typeof r.cod_factura === 'bigint' ? r.cod_factura.toString() : r.cod_factura,
+      ...rSerialized,
       observacion: truncatedText,
       observacion_completa: r.observacion,
       filaClase

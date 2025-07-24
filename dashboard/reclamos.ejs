@@ -71,7 +71,7 @@
               <td><%= r.cliente %></td>
               <td><%= r.maestro_21?.nombre || "sin nombre" %></td>
               <td><%= r.tipo %></td>
-              <td><%= r.area %></td>
+              <td><%- r.reclamo_area.map(a => a.area).join('<br />') %></td>
               <td><%= r.cod_factura %></td>
               <td><%= r.observacion %></td>
               <td class="estado">
@@ -134,7 +134,7 @@
       document.getElementById("popup-cliente").textContent = r.cliente;
       document.getElementById("popup-nombre").textContent = r.maestro_21?.nombre || "sin nombre";
       document.getElementById("popup-tipo").textContent = r.tipo;
-      document.getElementById("popup-area").textContent = r.area;
+      document.getElementById("popup-area").textContent = r.reclamo_area.map(a => a.area).join(', ');
       document.getElementById("popup-factura").textContent = r.cod_factura;
       document.getElementById("popup-observacion").textContent = r.observacion_completa;
 

@@ -90,14 +90,17 @@ app.post('/webhook', async (req, res) => {
     //Guardar reclamo
     if (estados[waId]?.paso === 'guardar') {
         const datos = estados[waId];
-        console.log("Observación recibida:", body);
 
         try {
             await prisma.reclamo.create({
                 data: {
                     cliente: datos.cliente_id,
                     tipo: datos.tipo,
-                    area: datos.area,
+                    reclamo_area: {
+                        create: datos.area.map((area) => ({
+                            area: area,
+                        })),
+                    },
                     cod_factura: datos.cod_factura,
                     estado: 'PENDIENTE',
                     observacion: body,
@@ -164,8 +167,8 @@ app.post('/webhook', async (req, res) => {
                     ...estados[waId],
                     paso: 'guardar',
                     tipo: ListTitle,
-                    cod_factura: 'FAC12345',
-                    area: 'ADMINISTRACION'
+                    cod_factura: 12345,
+                    area: ['ADMINISTRACION', 'VENTAS'],
                 };
                 break;
             case 'Solicitud NDC':
