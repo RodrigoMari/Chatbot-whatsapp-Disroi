@@ -4,25 +4,56 @@ const { ListItem } = require('twilio/lib/rest/content/v1/content.js');
 const { PrismaClient } = require('@prisma/client');
 const Sync = require('twilio/lib/rest/Sync.js');
 const { empty } = require('@prisma/client/runtime/library');
+const https = require('https');
+const fs = require('fs');
+const webpush = require('web-push');
+
+webpush.setVapidDetails(
+  'mailto:rodrigojuanmari@gmail.com',
+  process.env.VAPID_PUBLIC_KEY,
+  process.env.VAPID_PRIVATE_KEY
+);
 
 const prisma = new PrismaClient();
 const estados = {};
 const app = express();
 
+const allowedIPs = [
+    '192.168.110.146',  // Yo
+    '192.168.110.155',  // admin Ema
+    '192.168.110.158',  // admin Lucas
+    //'192.168.110.179',  // depo Cesar
+];
+
+//Chequear lista de IPs permitidas
+const checkIPWhitelist = (req, res, next) => {
+    const clientIP = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'];
+    
+    // Limpiar la IP (remover ::ffff: si está presente)
+    const cleanIP = clientIP.replace(/^::ffff:/, '');
+    
+    console.log('IP del cliente:', cleanIP); // Para debug
+    if (allowedIPs.includes(cleanIP)) {
+        return next();
+    }
+    
+    return res.status(403).send('Acceso denegado - IP no autorizada');
+};
+
+//bloquear conexion de ngrok
+const blockNgrokAccess = (req, res, next) => {
+    const host = req.get('host');
+    
+    // Si viene de ngrok, bloquear
+    if (host && host.includes('ngrok')) {
+        return res.status(403).send('Acceso denegado - Use la conexión local');
+    }
+    
+    // Si viene de localhost o IP local, permitir
+    next();
+};
+
 const path = require('path');
-
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'dashboard'));
-app.use(express.static(path.join(__dirname, 'dashboard')));
-const reclamosRouter = require('./dashboard/reclamos');
-app.use('/reclamos', reclamosRouter);
-
-
-const PORT = 5000;
-
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
-});
 
 const main = "HX6870b1d969384339885c8fa36ad104b0"
 
@@ -32,6 +63,7 @@ const sobreNosotros = "HXfc73d64a5f842aded7fac0af5d082fff"
 
 const noLlegó = "HX0cba42d4b6fdc98e57f029ad7df3b574";
 
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 async function identificarUsuario(waId, body) {
@@ -66,7 +98,7 @@ app.post('/webhook', async (req, res) => {
     const waId = req.body.WaId;
     const body = req.body.Body;
     const ListTitle = req.body.ListTitle;
-
+    
     //Mensaje de bienvenida
     if (!estados[waId]) {
         await twilio.sendMessage(waId,
@@ -105,6 +137,15 @@ app.post('/webhook', async (req, res) => {
                     estado: 'PENDIENTE',
                     observacion: body,
                 }
+            });
+
+            const payload = JSON.stringify({
+                title: 'Nuevo reclamo',
+                body: `Se creó el reclamo ID en estado PENDIENTE`
+            });
+
+            subscriptions.forEach(sub => {
+                webpush.sendNotification(sub, payload).catch(err => console.error(err));
             });
 
             delete estados[waId];
@@ -199,8 +240,50 @@ app.post('/webhook', async (req, res) => {
                 break;
         }
     }
+    res.status(200).send('OK');
 });
 
-app.listen(3000, () => {
-    console.log('Server is running on port 3000');
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'dashboard'));
+app.use(express.static(path.join(__dirname, 'dashboard')), blockNgrokAccess, checkIPWhitelist);
+const reclamosRouter = require('./dashboard/reclamos');
+app.use('/reclamos', blockNgrokAccess, checkIPWhitelist, reclamosRouter);
+
+let subscriptions = [];
+
+app.post('/enviar-notificacion', async (req, res) => {
+  const payload = JSON.stringify({
+    title: 'Nuevo reclamo',
+    body: 'Hay un nuevo reclamo pendiente de revisar'
+  });
+
+  const enviar = subscriptions.map(sub => webpush.sendNotification(sub, payload));
+
+  try {
+    await Promise.all(enviar);
+    res.status(200).send('Notificación enviada');
+  } catch (err) {
+    console.error('Error al enviar notificación:', err);
+    res.status(500).send('Error');
+  }
+});
+
+
+app.get('/vapidPublicKey', blockNgrokAccess, checkIPWhitelist, (req, res) => {
+  res.send(process.env.VAPID_PUBLIC_KEY);
+});
+
+app.post('/subscribe', blockNgrokAccess, checkIPWhitelist, express.json(), (req, res) => {
+  const subscription = req.body;
+  subscriptions.push(subscription);
+  res.status(201).json({});
+});
+
+const options = {
+  key: fs.readFileSync('key.pem'),
+  cert: fs.readFileSync('cert.pem')
+};
+
+https.createServer(options, app).listen(3443, () => {
+  console.log('Servidor HTTPS activo en puerto 3443');
 });

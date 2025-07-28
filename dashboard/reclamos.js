@@ -47,8 +47,8 @@ router.get('/', async (req, res) => {
     const diffHoras = Math.floor((now - reclamoFecha) / (1000 * 60 * 60));
 
     let filaClase = '';
-    if (diffHoras > 72 && r.estado !== 'COMPLETADO') filaClase = 'bg-dark-red text-white';
-    else if (diffHoras > 48 && r.estado !== 'COMPLETADO') filaClase = 'bg-red';
+    if (diffHoras > 72 && r.estado !== 'COMPLETADO') filaClase = 'bg-red text-white';
+    else if (diffHoras > 48 && r.estado !== 'COMPLETADO') filaClase = 'bg-orange';
     else if (diffHoras > 24 && r.estado !== 'COMPLETADO') filaClase = 'bg-yellow';
 
     const rSerialized = serializeBigInt(r);

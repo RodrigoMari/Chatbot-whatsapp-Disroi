@@ -9,6 +9,45 @@
 </head>
 <body class="bg-light text-dark" >
 
+  <script>
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      navigator.serviceWorker.register('/sw.js').then(registration => {
+        console.log('Service Worker registrado');
+
+        return registration.pushManager.getSubscription()
+          .then(async subscription => {
+            if (!subscription) {
+              const response = await fetch('/vapidPublicKey');
+              const vapidPublicKey = await response.text();
+              const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
+
+              return registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: convertedVapidKey
+              });
+            }
+            return subscription;
+          });
+      }).then(subscription => {
+        return fetch('/subscribe', {
+          method: 'POST',
+          body: JSON.stringify(subscription),
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+      });
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = atob(base64);
+      return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+    }
+  </script>
+
+
   <div class="container my-5">
     <h1 class="text-center fw-bold mb-4">Gestión de Reclamos</h1>
 
@@ -34,15 +73,15 @@
     <div class="mb-3 d-flex align-items-center gap-3">
       <span class="fw-bold">Tardanza:</span>
       <span class="d-inline-flex align-items-center">
-        <span style="display:inline-block;width:18px;height:18px;background:#fd7e14;border-radius:4px;margin-right:6px;border:1px solid #fd7e14;"></span>
+        <span style="display:inline-block;width:18px;height:18px;background:#fffb00;border-radius:4px;margin-right:6px;border:1px solid #fffb00;"></span>
         24h
       </span>
       <span class="d-inline-flex align-items-center">
-        <span style="display:inline-block;width:18px;height:18px;background:#fd1e34;border-radius:4px;margin-right:6px;border:1px solid #fd1e34;"></span>
+        <span style="display:inline-block;width:18px;height:18px;background:#fd7e14;border-radius:4px;margin-right:6px;border:1px solid #fd7e14;"></span>
         48h
       </span>
       <span class="d-inline-flex align-items-center">
-        <span style="display:inline-block;width:18px;height:18px;background:#a70000;border-radius:4px;margin-right:6px;border:1px solid #a70000;"></span>
+        <span style="display:inline-block;width:18px;height:18px;background:#fd1e34;border-radius:4px;margin-right:6px;border:1px solid #fd1e34;"></span>
         72h
       </span>
     </div>

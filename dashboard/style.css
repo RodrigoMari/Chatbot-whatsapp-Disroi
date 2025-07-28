@@ -74,16 +74,16 @@ tr:nth-child(even) {
   background-color: #f7f9fc;
 }
 
-.bg-dark-red {
-  background-color: #a70000 !important;
-}
-
 .bg-red {
   background-color: #fd1e34 !important;
 }
 
-.bg-yellow {
+.bg-orange {
   background-color: #fd7e14 !important;
+}
+
+.bg-yellow {
+  background-color: #fffb00 !important;
 }
 
 /* button */
