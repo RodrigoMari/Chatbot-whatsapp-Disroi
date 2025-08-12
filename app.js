@@ -19,17 +19,17 @@ const estados = {};
 const app = express();
 
 const allowedIPs = [
-    '192.168.110.146',  // Yo
-    '192.168.110.155',  // admin Ema
-    '192.168.110.158',  // admin Lucas
+    '179.60.217.196',  // Yo ip local
+    '181.92.200.67',  // admin Fran
     //'192.168.110.179',  // depo Cesar
 ];
+
+app.set('trust proxy', true);
 
 //Chequear lista de IPs permitidas
 const checkIPWhitelist = (req, res, next) => {
     const clientIP = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'];
-    
-    // Limpiar la IP (remover ::ffff: si está presente)
+
     const cleanIP = clientIP.replace(/^::ffff:/, '');
     
     console.log('IP del cliente:', cleanIP); // Para debug
@@ -42,12 +42,12 @@ const checkIPWhitelist = (req, res, next) => {
 
 //bloquear conexion de ngrok
 const blockNgrokAccess = (req, res, next) => {
-    const host = req.get('host');
+    //const host = req.get('host');
     
     // Si viene de ngrok, bloquear
-    if (host && host.includes('ngrok')) {
-        return res.status(403).send('Acceso denegado - Use la conexión local');
-    }
+//    if (host && host.includes('ngrok')) {
+//        return res.status(403).send('Acceso denegado - Use la conexión local');
+//    }
     
     // Si viene de localhost o IP local, permitir
     next();
@@ -141,7 +141,7 @@ app.post('/webhook', async (req, res) => {
 
             const payload = JSON.stringify({
                 title: 'Nuevo reclamo',
-                body: `Se creó el reclamo ID en estado PENDIENTE`
+                body: `Se creó el reclamo  en estado PENDIENTE`
             });
 
             subscriptions.forEach(sub => {
@@ -246,10 +246,26 @@ app.post('/webhook', async (req, res) => {
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'dashboard'));
 app.use(express.static(path.join(__dirname, 'dashboard')), blockNgrokAccess, checkIPWhitelist);
+app.use(express.static(path.join(__dirname, 'public')));
 const reclamosRouter = require('./dashboard/reclamos');
 app.use('/reclamos', blockNgrokAccess, checkIPWhitelist, reclamosRouter);
 
+const subscriptionsPath = path.join(__dirname, 'subscriptions.json');
 let subscriptions = [];
+
+if (fs.existsSync(subscriptionsPath)) {
+  try {
+    subscriptions = JSON.parse(fs.readFileSync(subscriptionsPath, 'utf-8'));
+    console.log('📦 Suscripciones cargadas:', subscriptions.length);
+  } catch (err) {
+    console.error('⚠️ Error leyendo subscriptions.json:', err);
+    subscriptions = [];
+  }
+}
+
+function saveSubscriptions() {
+  fs.writeFileSync(subscriptionsPath, JSON.stringify(subscriptions, null, 2));
+}
 
 app.post('/enviar-notificacion', async (req, res) => {
   const payload = JSON.stringify({
@@ -257,14 +273,41 @@ app.post('/enviar-notificacion', async (req, res) => {
     body: 'Hay un nuevo reclamo pendiente de revisar'
   });
 
-  const enviar = subscriptions.map(sub => webpush.sendNotification(sub, payload));
+  console.log('Enviando notificaciones a', subscriptions.length, 'subscripciones');
+
+  const fallidas = [];
+
+  const enviar = subscriptions.map((sub, i) => {
+    return webpush.sendNotification(sub, payload)
+      .then(() => {
+        console.log(`✅ Notificación enviada a subscription ${i}`);
+      })
+      .catch(err => {
+        console.error(`❌ Error al enviar notificación a subscription ${i}:`, err.statusCode);
+
+        // Si el error es 410 o 404, la subscription ya no sirve más
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          fallidas.push(i);
+        }
+      });
+  });
+  
 
   try {
     await Promise.all(enviar);
-    res.status(200).send('Notificación enviada');
+    
+    if (fallidas.length > 0) {
+      // Eliminar suscripciones inválidas
+      subscriptions = subscriptions.filter((_, i) => !fallidas.includes(i));
+      saveSubscriptions(); // guardar archivo actualizado
+      console.log(`🗑️ Eliminadas ${fallidas.length} suscripción(es) inválidas`);
+    }
+
+    console.log('📬 Todas las notificaciones enviadas (o descartadas)');
+    res.status(200).json({ ok: true });
   } catch (err) {
-    console.error('Error al enviar notificación:', err);
-    res.status(500).send('Error');
+    console.error('💥 Error general en Promise.all:', err);
+    res.status(500).json({ error: 'Error al enviar notificaciones' });
   }
 });
 
@@ -275,7 +318,18 @@ app.get('/vapidPublicKey', blockNgrokAccess, checkIPWhitelist, (req, res) => {
 
 app.post('/subscribe', blockNgrokAccess, checkIPWhitelist, express.json(), (req, res) => {
   const subscription = req.body;
-  subscriptions.push(subscription);
+
+  const exists = subscriptions.some(sub => sub.endpoint === subscription.endpoint);
+
+  if (!exists) {
+    subscriptions.push(subscription);
+    saveSubscriptions();
+    console.log('✅ Nueva suscripción guardada');
+  } else {
+    console.log('ℹ️ Suscripción ya existente (no se duplica)');
+  }
+
+  console.log('Total suscripciones:', subscriptions.length);
   res.status(201).json({});
 });
 
@@ -286,4 +340,8 @@ const options = {
 
 https.createServer(options, app).listen(3443, () => {
   console.log('Servidor HTTPS activo en puerto 3443');
+});
+
+app.listen(3000, () => {
+  console.log('Servidor HTTP en puerto 3000');
 });

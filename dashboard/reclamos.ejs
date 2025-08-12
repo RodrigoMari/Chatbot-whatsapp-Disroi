@@ -10,42 +10,54 @@
 <body class="bg-light text-dark" >
 
   <script>
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      navigator.serviceWorker.register('/sw.js').then(registration => {
-        console.log('Service Worker registrado');
+  if ('serviceWorker' in navigator && 'PushManager' in window) {
+    navigator.serviceWorker.register('/sw.js').then(registration => {
+      console.log('Service Worker registrado');
 
-        return registration.pushManager.getSubscription()
-          .then(async subscription => {
-            if (!subscription) {
-              const response = await fetch('/vapidPublicKey');
-              const vapidPublicKey = await response.text();
-              const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
-
-              return registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: convertedVapidKey
-              });
+      return registration.pushManager.getSubscription()
+        .then(async subscription => {
+          if (!subscription) {
+            const response = await fetch('/vapidPublicKey');
+            if (!response.ok) {
+              throw new Error('No se pudo obtener la clave VAPID');
             }
-            return subscription;
-          });
-      }).then(subscription => {
-        return fetch('/subscribe', {
-          method: 'POST',
-          body: JSON.stringify(subscription),
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-      });
-    }
+            const vapidPublicKey = await response.text();
+            const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
 
-    function urlBase64ToUint8Array(base64String) {
-      const padding = '='.repeat((4 - base64String.length % 4) % 4);
-      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-      const rawData = atob(base64);
-      return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
-    }
-  </script>
+            return registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: convertedVapidKey
+            });
+          }
+          return subscription;
+        });
+    }).then(subscription => {
+      return fetch('/subscribe', {
+        method: 'POST',
+        body: JSON.stringify(subscription),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+    }).then(response => {
+      if (response.ok) {
+        console.log('Suscripción enviada al servidor correctamente');
+      } else {
+        console.error('Error al enviar la suscripción al servidor:', response.statusText);
+      }
+    }).catch(error => {
+      console.error('Error durante el registro o suscripción:', error);
+    });
+  }
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+  }
+</script>
+
 
 
   <div class="container my-5">
