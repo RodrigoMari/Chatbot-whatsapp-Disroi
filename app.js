@@ -122,7 +122,6 @@ app.post('/webhook', async (req, res) => {
     //Guardar reclamo
     if (estados[waId]?.paso === 'guardar') {
         const datos = estados[waId];
-
         try {
             await prisma.reclamo.create({
                 data: {
@@ -139,14 +138,7 @@ app.post('/webhook', async (req, res) => {
                 }
             });
 
-            const payload = JSON.stringify({
-                title: 'Nuevo reclamo',
-                body: `Se creó el reclamo  en estado PENDIENTE`
-            });
-
-            subscriptions.forEach(sub => {
-                webpush.sendNotification(sub, payload).catch(err => console.error(err));
-            });
+            enviarNotificacion(datos.area)
 
             delete estados[waId];
             return;
@@ -209,7 +201,7 @@ app.post('/webhook', async (req, res) => {
                     paso: 'guardar',
                     tipo: ListTitle,
                     cod_factura: 12345,
-                    area: ['ADMINISTRACION', 'VENTAS'],
+                    area: ['VENTAS', 'ADMINISTRACION'],
                 };
                 break;
             case 'Solicitud NDC':
@@ -263,6 +255,21 @@ if (fs.existsSync(subscriptionsPath)) {
   }
 }
 
+function enviarNotificacion(areas) {
+    const payload = JSON.stringify({
+        title: 'Nuevo reclamo',
+        body: `Hay un reclamo nuevo en estado PENDIENTE`
+    });
+    
+    subscriptions.forEach(sub => {
+        areas.forEach(area => {
+            if (area === sub.area) {
+                webpush.sendNotification(sub, payload);
+            }
+        });
+    });
+}
+
 function saveSubscriptions() {
   fs.writeFileSync(subscriptionsPath, JSON.stringify(subscriptions, null, 2));
 }
@@ -299,7 +306,7 @@ app.post('/enviar-notificacion', async (req, res) => {
     if (fallidas.length > 0) {
       // Eliminar suscripciones inválidas
       subscriptions = subscriptions.filter((_, i) => !fallidas.includes(i));
-      saveSubscriptions(); // guardar archivo actualizado
+      saveSubscriptions();
       console.log(`🗑️ Eliminadas ${fallidas.length} suscripción(es) inválidas`);
     }
 
@@ -311,18 +318,40 @@ app.post('/enviar-notificacion', async (req, res) => {
   }
 });
 
+const SUBS_FILE = path.join(__dirname, 'subscriptions.json');
+
+app.get('/check-subscription', (req, res) => {
+  try {
+    if (!fs.existsSync(SUBS_FILE)) return res.json({ exists: false });
+    const subscriptions = JSON.parse(fs.readFileSync(SUBS_FILE, 'utf8'));
+    // Ejemplo: verificar IP o endpoint
+    const exists = subscriptions.some(sub => sub.ip === req.ip); 
+    res.json({ exists });
+  } catch (err) {
+    console.error(err);
+    res.json({ exists: false });
+  }
+});
+
+
 
 app.get('/vapidPublicKey', blockNgrokAccess, checkIPWhitelist, (req, res) => {
   res.send(process.env.VAPID_PUBLIC_KEY);
 });
 
 app.post('/subscribe', blockNgrokAccess, checkIPWhitelist, express.json(), (req, res) => {
-  const subscription = req.body;
+  const { subscription, area, nombre } = req.body;
+  const clientIP = req.ip?.replace(/^::ffff:/, '') || null;
 
   const exists = subscriptions.some(sub => sub.endpoint === subscription.endpoint);
 
   if (!exists) {
-    subscriptions.push(subscription);
+    subscriptions.push({
+        ...subscription,
+        area,
+        nombre,
+        ip: clientIP
+    });
     saveSubscriptions();
     console.log('✅ Nueva suscripción guardada');
   } else {

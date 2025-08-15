@@ -8,176 +8,222 @@
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body class="bg-light text-dark" >
+  <div id="pre-subscribe" class="d-flex flex-column justify-content-center align-items-center vh-100">
+    <h2 class="mb-3">Ingresa tu nombre y seleccioná tu área para continuar</h2>
+    <input type="text" id="nombre" class="form-control mb-3 mx-auto" placeholder="Ingresa tu nombre" style="width: 200px;">
+    <select id="area" class="form-select mb-3" style="width: 200px;">
+      <option value="">Selecciona tu área</option>
+      <option value="VENTAS">VENTAS</option>
+      <option value="DEPOSITO">DEPOSITO</option>
+      <option value="ADMINISTRACION">ADMINISTRACION</option>
+    </select>
 
-  <script>
-  if ('serviceWorker' in navigator && 'PushManager' in window) {
-    navigator.serviceWorker.register('/sw.js').then(registration => {
-      console.log('Service Worker registrado');
-
-      return registration.pushManager.getSubscription()
-        .then(async subscription => {
-          if (!subscription) {
-            const response = await fetch('/vapidPublicKey');
-            if (!response.ok) {
-              throw new Error('No se pudo obtener la clave VAPID');
-            }
-            const vapidPublicKey = await response.text();
-            const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
-
-            return registration.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: convertedVapidKey
-            });
-          }
-          return subscription;
-        });
-    }).then(subscription => {
-      return fetch('/subscribe', {
-        method: 'POST',
-        body: JSON.stringify(subscription),
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-    }).then(response => {
-      if (response.ok) {
-        console.log('Suscripción enviada al servidor correctamente');
-      } else {
-        console.error('Error al enviar la suscripción al servidor:', response.statusText);
-      }
-    }).catch(error => {
-      console.error('Error durante el registro o suscripción:', error);
-    });
-  }
-
-  function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const rawData = atob(base64);
-    return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
-  }
-</script>
-
-
-
-  <div class="container my-5">
-    <h1 class="text-center fw-bold mb-4">Gestión de Reclamos</h1>
-
-    <!-- Filtro de estado -->
-    <form method="GET" action="/reclamos" class="d-flex justify-content-end mb-4">
-      <select class="form-select filtro-estado" name="estado" onchange="this.form.submit()">
-        <option value="">Todos los estados</option>
-        <option value="PENDIENTE" <%= estadoSeleccionado === 'PENDIENTE' ? 'selected' : '' %>>PENDIENTE</option>
-        <option value="EN_PROCESO" <%= estadoSeleccionado === 'EN_PROCESO' ? 'selected' : '' %>>EN PROCESO</option>
-        <option value="COMPLETADO" <%= estadoSeleccionado === 'COMPLETADO' ? 'selected' : '' %>>COMPLETADO</option>
-      </select>
-
-    <!-- Filtro de area -->
-      <select class="form-select filtro-area" name="area" onchange="this.form.submit()">
-        <option value="">Todas las áreas</option>
-        <option value="VENTAS" <%= areaSeleccionada === 'VENTAS' ? 'selected' : '' %>>VENTAS</option>
-        <option value="DEPOSITO" <%= areaSeleccionada === 'DEPOSITO' ? 'selected' : '' %>>DEPOSITO</option>
-        <option value="ADMINISTRACION" <%= areaSeleccionada === 'ADMINISTRACION' ? 'selected' : '' %>>ADMINISTRACION</option>
-      </select>
-    </form>
-
-    <!-- Leyenda de estados por tardanza -->
-    <div class="mb-3 d-flex align-items-center gap-3">
-      <span class="fw-bold">Tardanza:</span>
-      <span class="d-inline-flex align-items-center">
-        <span style="display:inline-block;width:18px;height:18px;background:#fffb00;border-radius:4px;margin-right:6px;border:1px solid #fffb00;"></span>
-        24h
-      </span>
-      <span class="d-inline-flex align-items-center">
-        <span style="display:inline-block;width:18px;height:18px;background:#fd7e14;border-radius:4px;margin-right:6px;border:1px solid #fd7e14;"></span>
-        48h
-      </span>
-      <span class="d-inline-flex align-items-center">
-        <span style="display:inline-block;width:18px;height:18px;background:#fd1e34;border-radius:4px;margin-right:6px;border:1px solid #fd1e34;"></span>
-        72h
-      </span>
-    </div>
-
-    <div class="table-responsive">
-      <table class="table table-bordered table-hover bg-white align-middle text-center">
-        <thead class="table-primary text-uppercase">
-          <tr>
-            <th>Fecha</th>
-            <th>ID</th>
-            <th>Código</th>
-            <th>Nombre</th>
-            <th>Tipo</th>
-            <th>Área</th>
-            <th>Factura</th>
-            <th>Observación</th>
-            <th>Estado</th>
-            <th>Acción</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% reclamos.forEach(function(r) { %>
-            <tr>
-              <td class="<%= r.filaClase %>"><%= new Date(r.fecha_tiempo).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }) %></td>
-              <td><%= r.id %></td>
-              <td><%= r.cliente %></td>
-              <td><%= r.maestro_21?.nombre || "sin nombre" %></td>
-              <td><%= r.tipo %></td>
-              <td><%- r.reclamo_area.map(a => a.area).join('<br />') %></td>
-              <td><%= r.cod_factura %></td>
-              <td><%= r.observacion %></td>
-              <td class="estado">
-                <% if (r.estado === 'COMPLETADO') { %>
-                  <span class="badge bg-success">✅</span>
-                <% } else if (r.estado === 'EN_PROCESO') { %>
-                  <span class="badge bg-primary">🔄</span>
-                <% } else if (r.estado === 'PENDIENTE') { %>
-                  <span class="badge bg-warning text-dark">⏳</span>
-                <% } else { %>
-                  <span class="badge bg-secondary">❓</span>
-                <% } %>
-              </td>
-              <td>
-                <button type="button" class="btn btn-success btn-sm"
-                  onclick='mostrarPopup(JSON.parse(decodeURIComponent("<%= encodeURIComponent(JSON.stringify(r)) %>")))' 
-                  aria-label="Ver reclamo <%= r.id %>">
-                  Revisar reclamo
-                </button>
-              </td>
-            </tr>
-          <% }) %>
-        </tbody>
-      </table>
-    </div>
+    <button id="subscribe" class="btn btn-primary">Suscribirme</button>
   </div>
 
-  <!-- Popup -->
-  <div id="popup" class="popup-overlay d-none">
-    <div class="popup-content">
-      <h5 class="mb-3">Detalles del Reclamo</h5>
-      <p><strong>Fecha:</strong> <span id="popup-fecha"></span></p>
-      <p><strong>ID:</strong> <span id="popup-id"></span></p>
-      <p><strong>Cliente:</strong> <span id="popup-cliente"></span></p>
-      <p><strong>Nombre:</strong> <span id="popup-nombre"></span></p>
-      <p><strong>Tipo:</strong> <span id="popup-tipo"></span></p>
-      <p><strong>Área:</strong> <span id="popup-area"></span></p>
-      <p><strong>Factura:</strong> <span id="popup-factura"></span></p>
-      <p><strong>Observación:</strong> <span id="popup-observacion"></span></p>
+  <script>
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = atob(base64);
+      return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+    }
 
-      <div class="popup-buttons">
-        <form method="POST" id="popup-form-completado">
-          <button type="submit" class="btn btn-success w-100">✅ Completado</button>
-        </form>
-        <form method="POST" id="popup-form-en-proceso">
-          <button type="submit" class="btn btn-primary w-100">🔄 En proceso</button>
-        </form>
-        <form method="POST" id="popup-form-pendiente">
-          <button type="submit" class="btn btn-warning text-dark w-100">⏳ Pendiente</button>
-        </form>
-        <button type="button" onclick="cerrarPopup()" class="btn btn-secondary w-100">❌ Cancelar</button>
+    async function checkSubscription() {
+      try {
+        const res = await fetch('/check-subscription');
+        if (!res.ok) throw new Error('Error verificando suscripción');
+        const data = await res.json();
+        return data.exists;
+      } catch (err) {
+        console.error(err);
+        return false;
+      }
+    }
+
+    async function init() {
+      const exists = await checkSubscription();
+      if (exists) {
+        document.getElementById('pre-subscribe').classList.add('d-none');
+        document.getElementById('main-content').classList.remove('d-none');
+      }
+    }
+
+    async function subscribePush(areaSeleccionada, nombreSeleccionado) {
+      if (!('serviceWorker' in navigator && 'PushManager' in window)) {
+        alert('Tu navegador no soporta notificaciones push.');
+        return;
+      }
+
+      try {
+        const registration = await navigator.serviceWorker.register('/sw.js');
+        console.log('Service Worker registrado');
+
+        let subscription = await registration.pushManager.getSubscription();
+        if (!subscription) {
+          const response = await fetch('/vapidPublicKey');
+          if (!response.ok) throw new Error('No se pudo obtener la clave VAPID');
+
+          const vapidPublicKey = await response.text();
+          const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
+
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: convertedVapidKey
+          });
+        }
+
+        const res = await fetch('/subscribe', {
+          method: 'POST',
+          body: JSON.stringify({ subscription, area: areaSeleccionada, nombre: nombreSeleccionado }),
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!res.ok) throw new Error('Error al enviar la suscripción al servidor');
+
+        // Suscripción exitosa: ocultar pantalla de pre-suscripción y mostrar contenido principal
+        document.getElementById('pre-subscribe').classList.add('d-none');
+        document.getElementById('main-content').classList.remove('d-none');
+
+      } catch (err) {
+        console.error('Error durante la suscripción:', err);
+        alert('Ocurrió un error al suscribirse. Intenta nuevamente.');
+      }
+    }
+
+    document.getElementById('subscribe').addEventListener('click', () => {
+      const area = document.getElementById('area').value;
+      const nombre = document.getElementById('nombre').value;
+      if (!area || !nombre) {
+        alert('Por favor ingresa tu nombre y selecciona un área antes de suscribirte.');
+        return;
+      }
+      subscribePush(area, nombre);
+    });
+
+    window.addEventListener('load', init);
+  </script>
+
+
+  <div id="main-content" class="d-none">
+    <div class="container my-5">
+      <h1 class="text-center fw-bold mb-4">Gestión de Reclamos</h1>
+
+      <!-- Filtro de estado -->
+      <form method="GET" action="/reclamos" class="d-flex justify-content-end mb-4">
+        <select class="form-select filtro-estado" name="estado" onchange="this.form.submit()">
+          <option value="">Todos los estados</option>
+          <option value="PENDIENTE" <%= estadoSeleccionado === 'PENDIENTE' ? 'selected' : '' %>>PENDIENTE</option>
+          <option value="EN_PROCESO" <%= estadoSeleccionado === 'EN_PROCESO' ? 'selected' : '' %>>EN PROCESO</option>
+          <option value="COMPLETADO" <%= estadoSeleccionado === 'COMPLETADO' ? 'selected' : '' %>>COMPLETADO</option>
+        </select>
+
+      <!-- Filtro de area -->
+        <select class="form-select filtro-area" name="area" onchange="this.form.submit()">
+          <option value="">Todas las áreas</option>
+          <option value="VENTAS" <%= areaSeleccionada === 'VENTAS' ? 'selected' : '' %>>VENTAS</option>
+          <option value="DEPOSITO" <%= areaSeleccionada === 'DEPOSITO' ? 'selected' : '' %>>DEPOSITO</option>
+          <option value="ADMINISTRACION" <%= areaSeleccionada === 'ADMINISTRACION' ? 'selected' : '' %>>ADMINISTRACION</option>
+        </select>
+      </form>
+
+      <!-- Leyenda de estados por tardanza -->
+      <div class="mb-3 d-flex align-items-center gap-3">
+        <span class="fw-bold">Tardanza:</span>
+        <span class="d-inline-flex align-items-center">
+          <span style="display:inline-block;width:18px;height:18px;background:#fffb00;border-radius:4px;margin-right:6px;border:1px solid #fffb00;"></span>
+          24h
+        </span>
+        <span class="d-inline-flex align-items-center">
+          <span style="display:inline-block;width:18px;height:18px;background:#fd7e14;border-radius:4px;margin-right:6px;border:1px solid #fd7e14;"></span>
+          48h
+        </span>
+        <span class="d-inline-flex align-items-center">
+          <span style="display:inline-block;width:18px;height:18px;background:#fd1e34;border-radius:4px;margin-right:6px;border:1px solid #fd1e34;"></span>
+          72h
+        </span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-bordered table-hover bg-white align-middle text-center">
+          <thead class="table-primary text-uppercase">
+            <tr>
+              <th>Fecha</th>
+              <th>ID</th>
+              <th>Código</th>
+              <th>Nombre</th>
+              <th>Tipo</th>
+              <th>Área</th>
+              <th>Factura</th>
+              <th>Observación</th>
+              <th>Estado</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% reclamos.forEach(function(r) { %>
+              <tr>
+                <td class="<%= r.filaClase %>"><%= new Date(r.fecha_tiempo).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }) %></td>
+                <td><%= r.id %></td>
+                <td><%= r.cliente %></td>
+                <td><%= r.maestro_21?.nombre || "sin nombre" %></td>
+                <td><%= r.tipo %></td>
+                <td><%- r.reclamo_area.map(a => a.area).join('<br />') %></td>
+                <td><%= r.cod_factura %></td>
+                <td><%= r.observacion %></td>
+                <td class="estado">
+                  <% if (r.estado === 'COMPLETADO') { %>
+                    <span class="badge bg-success">✅</span>
+                  <% } else if (r.estado === 'EN_PROCESO') { %>
+                    <span class="badge bg-primary">🔄</span>
+                  <% } else if (r.estado === 'PENDIENTE') { %>
+                    <span class="badge bg-warning text-dark">⏳</span>
+                  <% } else { %>
+                    <span class="badge bg-secondary">❓</span>
+                  <% } %>
+                </td>
+                <td>
+                  <button type="button" class="btn btn-success btn-sm"
+                    onclick='mostrarPopup(JSON.parse(decodeURIComponent("<%= encodeURIComponent(JSON.stringify(r)) %>")))' 
+                    aria-label="Ver reclamo <%= r.id %>">
+                    Revisar reclamo
+                  </button>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Popup -->
+    <div id="popup" class="popup-overlay d-none">
+      <div class="popup-content">
+        <h5 class="mb-3">Detalles del Reclamo</h5>
+        <p><strong>Fecha:</strong> <span id="popup-fecha"></span></p>
+        <p><strong>ID:</strong> <span id="popup-id"></span></p>
+        <p><strong>Cliente:</strong> <span id="popup-cliente"></span></p>
+        <p><strong>Nombre:</strong> <span id="popup-nombre"></span></p>
+        <p><strong>Tipo:</strong> <span id="popup-tipo"></span></p>
+        <p><strong>Área:</strong> <span id="popup-area"></span></p>
+        <p><strong>Factura:</strong> <span id="popup-factura"></span></p>
+        <p><strong>Observación:</strong> <span id="popup-observacion"></span></p>
+
+        <div class="popup-buttons">
+          <form method="POST" id="popup-form-completado">
+            <button type="submit" class="btn btn-success w-100">✅ Completado</button>
+          </form>
+          <form method="POST" id="popup-form-en-proceso">
+            <button type="submit" class="btn btn-primary w-100">🔄 En proceso</button>
+          </form>
+          <form method="POST" id="popup-form-pendiente">
+            <button type="submit" class="btn btn-warning text-dark w-100">⏳ Pendiente</button>
+          </form>
+          <button type="button" onclick="cerrarPopup()" class="btn btn-secondary w-100">❌ Cancelar</button>
+        </div>
       </div>
     </div>
   </div>
-
   <script>
     function mostrarPopup(r) {
       document.getElementById("popup-fecha").textContent = new Date(r.fecha_tiempo).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
