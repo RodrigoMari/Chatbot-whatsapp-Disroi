@@ -43,6 +43,18 @@ model reclamo_area {
   @@index([reclamo_Id], map: "reclamoId")
 }
 
+model suscripciones {
+  id             Int       @id @default(autoincrement())
+  endpoint       String    @db.Text
+  expirationTime DateTime? @db.DateTime(0)
+  p256dh         String    @db.Text
+  auth           String    @db.VarChar(255)
+  area           String    @db.VarChar(100)
+  nombre         String    @db.VarChar(100)
+  ip             String    @db.VarChar(45)
+  created_at     DateTime  @default(now()) @db.Timestamp(0)
+}
+
 enum reclamo_estado {
   PENDIENTE
   EN_PROCESO

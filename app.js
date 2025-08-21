@@ -21,6 +21,7 @@ const app = express();
 const allowedIPs = [
     '179.60.217.196',  // Yo ip local
     '181.92.200.67',  // admin Fran
+    '186.182.43.30',  // admin Rodri
     //'192.168.110.179',  // depo Cesar
 ];
 
@@ -57,7 +58,7 @@ const path = require('path');
 
 const main = "HX6870b1d969384339885c8fa36ad104b0"
 
-const reclamo = "HX4f0a92516ed5057531bc858c1da18804"
+const reclamo = "HX6e0e0c38732d2da69eb30496f53f491f"
 const pedido = "HX25d7f54ba8b3d54d947652ffac9b8703"
 const sobreNosotros = "HXfc73d64a5f842aded7fac0af5d082fff"
 
@@ -102,7 +103,7 @@ app.post('/webhook', async (req, res) => {
     //Mensaje de bienvenida
     if (!estados[waId]) {
         await twilio.sendMessage(waId,
-            "Bienvenido al asistente virtual de *Disroi*, mi nombre es *Rodri*\n\n" +
+            "🤖 ¡Bienvenido al asistente virtual de *Disroi*! Mi nombre es *Rodri*\n\n" +
             "Para comenzar, le solicito que me brinde su *código de cliente* (sin ceros) o su *número de documento* para su correcta identificación\n\n"
         );
         estados[waId] = { paso: 'esperando_identificacion' };
@@ -115,7 +116,10 @@ app.post('/webhook', async (req, res) => {
         if (estados[waId].identificado) {
             estados[waId].paso = 'flujo';
         } else {
-            twilio.sendMessage(waId, "No he podido identificarlo. Por favor, intente nuevamente. Asegúrese de ingresar solo su código de cliente (sin ceros) o número de documento");
+            twilio.sendMessage(waId, 
+                "​🙅‍♂️​ No he podido identificarlo ​🙅‍♂️\n\n" + 
+                "Por favor, intente nuevamente. Asegúrese de ingresar solo su *código de cliente* (sin ceros) o *número de documento*"
+            );
         }
     }
 
@@ -139,6 +143,13 @@ app.post('/webhook', async (req, res) => {
             });
 
             enviarNotificacion(datos.area)
+            prisma.maestro_cliente.findFirst({where: { codigo: datos.cliente_id }
+                }).then(async cliente => {
+                    if (cliente) {
+                        twilio.sendMessage(waId, "*" + cliente.nombre + "*, gracias por comunicar tu reclamo referido a *" + datos.tipo + "*. En las próximas 72hs recibirá una respuesta por parte del responsable.");
+                    }
+                });
+
 
             delete estados[waId];
             return;
@@ -196,7 +207,6 @@ app.post('/webhook', async (req, res) => {
             case 'Diferencia en CC':
                 twilio.sendMessage(waId, "Por favor, escribe una observación sobre lo ocurrido (máximo 300 caracteres). Cualquier información adicional es bienvenida.");
                 estados[waId] = {
-
                     ...estados[waId],
                     paso: 'guardar',
                     tipo: ListTitle,
@@ -242,91 +252,67 @@ app.use(express.static(path.join(__dirname, 'public')));
 const reclamosRouter = require('./dashboard/reclamos');
 app.use('/reclamos', blockNgrokAccess, checkIPWhitelist, reclamosRouter);
 
-const subscriptionsPath = path.join(__dirname, 'subscriptions.json');
-let subscriptions = [];
-
-if (fs.existsSync(subscriptionsPath)) {
-  try {
-    subscriptions = JSON.parse(fs.readFileSync(subscriptionsPath, 'utf-8'));
-    console.log('📦 Suscripciones cargadas:', subscriptions.length);
-  } catch (err) {
-    console.error('⚠️ Error leyendo subscriptions.json:', err);
-    subscriptions = [];
-  }
-}
-
-function enviarNotificacion(areas) {
+async function enviarNotificacion(areas) {
     const payload = JSON.stringify({
         title: 'Nuevo reclamo',
         body: `Hay un reclamo nuevo en estado PENDIENTE`
     });
     
-    subscriptions.forEach(sub => {
-        areas.forEach(area => {
-            if (area === sub.area) {
-                webpush.sendNotification(sub, payload);
-            }
-        });
-    });
-}
-
-function saveSubscriptions() {
-  fs.writeFileSync(subscriptionsPath, JSON.stringify(subscriptions, null, 2));
-}
-
-app.post('/enviar-notificacion', async (req, res) => {
-  const payload = JSON.stringify({
-    title: 'Nuevo reclamo',
-    body: 'Hay un nuevo reclamo pendiente de revisar'
-  });
-
-  console.log('Enviando notificaciones a', subscriptions.length, 'subscripciones');
-
-  const fallidas = [];
-
-  const enviar = subscriptions.map((sub, i) => {
-    return webpush.sendNotification(sub, payload)
-      .then(() => {
-        console.log(`✅ Notificación enviada a subscription ${i}`);
-      })
-      .catch(err => {
-        console.error(`❌ Error al enviar notificación a subscription ${i}:`, err.statusCode);
-
-        // Si el error es 410 o 404, la subscription ya no sirve más
-        if (err.statusCode === 410 || err.statusCode === 404) {
-          fallidas.push(i);
+    const subs = await prisma.suscripciones.findMany({
+        where: {
+            area: { in: areas }
         }
-      });
-  });
-  
+    });
 
-  try {
-    await Promise.all(enviar);
-    
-    if (fallidas.length > 0) {
-      // Eliminar suscripciones inválidas
-      subscriptions = subscriptions.filter((_, i) => !fallidas.includes(i));
-      saveSubscriptions();
-      console.log(`🗑️ Eliminadas ${fallidas.length} suscripción(es) inválidas`);
+    for (const sub of subs) {
+        const pushSub = {
+            endpoint: sub.endpoint,
+            expirationTime: sub.expirationTime,
+            keys: {
+                p256dh: sub.p256dh,
+                auth: sub.auth
+            }
+        };
+
+        try {
+            await webpush.sendNotification(pushSub, payload);
+        } catch (err) {
+            console.error("Error enviando notificación:", err);
+
+            // ⚠️ TIP: si el endpoint ya no es válido, podés borrarlo de la BD
+            if (err.statusCode === 410 || err.statusCode === 404) {
+                await prisma.suscripciones.delete({
+                    where: { id: sub.id }
+                });
+                console.log(`Suscripción eliminada (endpoint inválido): ${sub.endpoint}`);
+            }
+        }
     }
+}
 
-    console.log('📬 Todas las notificaciones enviadas (o descartadas)');
-    res.status(200).json({ ok: true });
-  } catch (err) {
-    console.error('💥 Error general en Promise.all:', err);
-    res.status(500).json({ error: 'Error al enviar notificaciones' });
-  }
-});
+async function saveSubscription(sub) {
+  await prisma.suscripciones.create({
+    data: {
+      endpoint: sub.endpoint,
+      expirationTime: sub.expirationTime ? new Date(sub.expirationTime) : null,
+      p256dh: sub.keys.p256dh,
+      auth: sub.keys.auth,
+      area: sub.area,
+      nombre: sub.nombre,
+      ip: sub.ip
+    }
+  });
+}
 
-const SUBS_FILE = path.join(__dirname, 'subscriptions.json');
-
-app.get('/check-subscription', (req, res) => {
+app.get('/check-subscription', async (req, res) => {
   try {
-    if (!fs.existsSync(SUBS_FILE)) return res.json({ exists: false });
-    const subscriptions = JSON.parse(fs.readFileSync(SUBS_FILE, 'utf8'));
-    // Ejemplo: verificar IP o endpoint
-    const exists = subscriptions.some(sub => sub.ip === req.ip); 
-    res.json({ exists });
+    const clientIP = req.ip?.replace(/^::ffff:/, '') || null;
+
+    const exists = await prisma.suscripciones.findFirst({
+      where: { ip: clientIP }
+    });
+
+    res.json({ exists: !!exists });
   } catch (err) {
     console.error(err);
     res.json({ exists: false });
@@ -339,26 +325,37 @@ app.get('/vapidPublicKey', blockNgrokAccess, checkIPWhitelist, (req, res) => {
   res.send(process.env.VAPID_PUBLIC_KEY);
 });
 
-app.post('/subscribe', blockNgrokAccess, checkIPWhitelist, express.json(), (req, res) => {
+app.post('/subscribe', blockNgrokAccess, checkIPWhitelist, express.json(), async (req, res) => {
   const { subscription, area, nombre } = req.body;
   const clientIP = req.ip?.replace(/^::ffff:/, '') || null;
 
-  const exists = subscriptions.some(sub => sub.endpoint === subscription.endpoint);
+  const { endpoint } = req.query;
+  const exists = await prisma.suscripciones.findFirst({
+    where: {
+        OR: [
+        { ip: clientIP },
+        { endpoint: endpoint || "" }
+        ]
+    }
+  });
 
   if (!exists) {
-    subscriptions.push({
-        ...subscription,
-        area,
-        nombre,
-        ip: clientIP
-    });
-    saveSubscriptions();
+    const newSub = {
+      ...subscription,
+      area,
+      nombre,
+      ip: clientIP
+    };
+
+    //subscriptions.push(newSub);
+    saveSubscription(newSub);
     console.log('✅ Nueva suscripción guardada');
   } else {
     console.log('ℹ️ Suscripción ya existente (no se duplica)');
   }
 
-  console.log('Total suscripciones:', subscriptions.length);
+  const totalSuscripciones = await prisma.suscripciones.count();
+  console.log(`Total de suscripciones: ${totalSuscripciones}`);
   res.status(201).json({});
 });
 
