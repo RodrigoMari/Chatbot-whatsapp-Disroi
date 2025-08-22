@@ -55,6 +55,13 @@ model suscripciones {
   created_at     DateTime  @default(now()) @db.Timestamp(0)
 }
 
+model vendedor {
+  id       Int     @id @default(autoincrement())
+  codigo   String  @unique(map: "codigo") @db.VarChar(2)
+  nombre   String  @db.VarChar(50)
+  telefono String? @db.VarChar(20)
+}
+
 enum reclamo_estado {
   PENDIENTE
   EN_PROCESO

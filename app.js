@@ -1,5 +1,5 @@
 const express = require('express');
-const twilio = require('./twilio.js'); // reemplazá por la ruta real
+const twilio = require('./twilio.js');
 const { ListItem } = require('twilio/lib/rest/content/v1/content.js');
 const { PrismaClient } = require('@prisma/client');
 const Sync = require('twilio/lib/rest/Sync.js');
@@ -33,7 +33,7 @@ const checkIPWhitelist = (req, res, next) => {
 
     const cleanIP = clientIP.replace(/^::ffff:/, '');
     
-    console.log('IP del cliente:', cleanIP); // Para debug
+    //console.log('IP del cliente:', cleanIP);
     if (allowedIPs.includes(cleanIP)) {
         return next();
     }
@@ -126,6 +126,7 @@ app.post('/webhook', async (req, res) => {
     //Guardar reclamo
     if (estados[waId]?.paso === 'guardar') {
         const datos = estados[waId];
+        console.log("Datos del reclamo:", datos);
         try {
             await prisma.reclamo.create({
                 data: {
@@ -136,9 +137,9 @@ app.post('/webhook', async (req, res) => {
                             area: area,
                         })),
                     },
-                    cod_factura: datos.cod_factura,
+                    cod_factura: datos.cod_factura || null,
                     estado: 'PENDIENTE',
-                    observacion: body,
+                    observacion: body || 'Sin observaciones adicionales',
                 }
             });
 
@@ -202,8 +203,34 @@ app.post('/webhook', async (req, res) => {
                 twilio.sendListPicker(waId, noLlegó);
                 break;
             case 'Mi vendedor no me visitó':
-                //avisarle al vendedor directamente que hay que visitarlo de manera urgente
+                let mensaje = "Le pedimos disculpas de parte del equipo de Disroi\n\n" +
+                            "Registramos el reclamo, sin embargo, le pedimos que se comunique de manera directa con alguno de sus vendedores asignados.\n\n"
+
+                prisma.maestro_cliente.findFirst({where: { codigo: estados[waId].cliente_id }
+                }).then(cliente => {
+                    prisma.vendedor.findFirst({where: { codigo: cliente.vendedor_1 }
+                    }).then(vendedor1 => {
+                        prisma.vendedor.findFirst({where: { codigo: cliente.vendedor_2 }
+                        }).then(vendedor2 => {
+                            if(vendedor1?.telefono)
+                                mensaje += `${vendedor1.nombre}: ${vendedor1.telefono}\n\n`;
+                            if(vendedor2?.telefono != null)
+                                mensaje += `${vendedor2.nombre}: ${vendedor2.telefono}\n\n`;
+
+                            twilio.sendMessage(waId, mensaje);
+                        });
+                    });
+                });
+
+                estados[waId] = {
+                    ...estados[waId],
+                    paso: 'guardar',
+                    tipo: ListTitle,
+                    area: ['VENTAS'],
+                };
+
                 break;
+
             case 'Diferencia en CC':
                 twilio.sendMessage(waId, "Por favor, escribe una observación sobre lo ocurrido (máximo 300 caracteres). Cualquier información adicional es bienvenida.");
                 estados[waId] = {
