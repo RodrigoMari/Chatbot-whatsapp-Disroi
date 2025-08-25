@@ -31,10 +31,16 @@ router.get('/', async (req, res) => {
   const reclamos = await prisma.reclamo.findMany({
     orderBy: { id: 'desc' },
     where: filtro,
-    include: { 
-      maestro_21: true,
+    include: {
+      maestro_21: {
+        select: {
+          nombre: true,
+          vendedor_1: true,
+          vendedor_2: true
+        }
+      },
       reclamo_area: true
-     },
+    },
   });
   
   const now = new Date();

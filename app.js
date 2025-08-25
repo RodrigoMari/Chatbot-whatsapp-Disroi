@@ -76,7 +76,6 @@ async function identificarUsuario(waId, body) {
         }
         const cliente = await prisma.maestro_cliente.findFirst({where: {codigo: codigoCeros}});
         if (cliente){
-            //await twilio.sendMessage(waId, `Hola ${cliente.nombre}`);
             estados[waId] = { identificado: true, cliente_id: cliente.codigo };
         }
     }
@@ -123,6 +122,7 @@ app.post('/webhook', async (req, res) => {
         }
     }
 
+
     //Guardar reclamo
     if (estados[waId]?.paso === 'guardar') {
         const datos = estados[waId];
@@ -137,7 +137,7 @@ app.post('/webhook', async (req, res) => {
                             area: area,
                         })),
                     },
-                    cod_factura: datos.cod_factura || null,
+                    cod_factura: parseInt(datos.cod_factura, 10) || null,
                     estado: 'PENDIENTE',
                     observacion: body || 'Sin observaciones adicionales',
                 }
@@ -147,7 +147,7 @@ app.post('/webhook', async (req, res) => {
             prisma.maestro_cliente.findFirst({where: { codigo: datos.cliente_id }
                 }).then(async cliente => {
                     if (cliente) {
-                        twilio.sendMessage(waId, "*" + cliente.nombre + "*, gracias por comunicar tu reclamo referido a *" + datos.tipo + "*. En las próximas 72hs recibirá una respuesta por parte del responsable.");
+                        twilio.sendMessage(waId, "*" + cliente.nombre + "*, gracias por comunicar tu reclamo referido a *" + datos.tipo + "*. En las próximas 72hs recibirá una respuesta por parte del/los responsable/s.");
                     }
                 });
 
@@ -159,6 +159,22 @@ app.post('/webhook', async (req, res) => {
             await twilio.sendMessage(waId, "Ocurrió un error al guardar su reclamo. Por favor, intente nuevamente.");
         }
         
+    }
+
+    if (estados[waId]?.paso === 'factura') {
+        if(body.length > 6 || body.length < 5) {
+            twilio.sendMessage(waId, "El código de factura debe tener 5 o 6 caracteres.\n\n"
+                + "Recuerde, las facturas de *6 digitos* corresponden a *facturas tipo A* mientras que las de *5 digitos* a *facturas tipo B*.");
+            return;
+        }
+
+        twilio.sendMessage(waId, "Perfecto. Ahora, por favor, escriba alguna observación que nos pueda dar contexto de la situación (máximo 300 caracteres).");
+
+        estados[waId] = {
+            ...estados[waId],
+            paso: 'guardar',
+            cod_factura: body,
+        };
     }
 
     //Flujo principal
@@ -199,27 +215,32 @@ app.post('/webhook', async (req, res) => {
                 twilio.sendListPicker(waId, noLlegó);
                 break;
             case 'Me falta un producto':
-                //pedir num de facturacion y cod cliente
-                twilio.sendListPicker(waId, noLlegó);
-                break;
+                twilio.sendMessage(waId, "Para continuar, por favor, escribe el *codigo de factura* de *5 o 6 dígitos (sin ceros)* referido a esta diferencia\n\n"
+                    + "Como dato, las facturas de *6 digitos* corresponden a *facturas tipo A* mientras que las de *5 digitos* a *facturas tipo B*");
+                estados[waId] = {
+                    ...estados[waId],
+                    paso: 'factura',
+                    tipo: ListTitle,
+                    area: ['VENTAS', 'ADMINISTRACION'],
+                };
             case 'Mi vendedor no me visitó':
-                let mensaje = "Le pedimos disculpas de parte del equipo de Disroi\n\n" +
-                            "Registramos el reclamo, sin embargo, le pedimos que se comunique de manera directa con alguno de sus vendedores asignados.\n\n"
+                let mensaje = "🙏​ Le pedimos disculpas de parte del equipo de Disroi\n\n"
 
                 prisma.maestro_cliente.findFirst({where: { codigo: estados[waId].cliente_id }
-                }).then(cliente => {
-                    prisma.vendedor.findFirst({where: { codigo: cliente.vendedor_1 }
-                    }).then(vendedor1 => {
-                        prisma.vendedor.findFirst({where: { codigo: cliente.vendedor_2 }
-                        }).then(vendedor2 => {
-                            if(vendedor1?.telefono)
-                                mensaje += `${vendedor1.nombre}: ${vendedor1.telefono}\n\n`;
+                }).then(async cliente => {
+                    if (cliente) {
+                        let vendedor1 = await prisma.vendedor.findFirst({where: { codigo: cliente.vendedor_1 }});
+                        let vendedor2 = await prisma.vendedor.findFirst({where: { codigo: cliente.vendedor_2 }});
+                        if(vendedor1?.telefono)
+                            mensaje += "Por si los precisa, sus vendedores son:\n\n";
+                            mensaje += `${vendedor1.nombre}: ${vendedor1.telefono}\n\n`;
                             if(vendedor2?.telefono != null)
                                 mensaje += `${vendedor2.nombre}: ${vendedor2.telefono}\n\n`;
-
-                            twilio.sendMessage(waId, mensaje);
-                        });
-                    });
+                        
+                        mensaje += "Para terminar, escriba alguna observación que nos pueda dar contexto de la situación.";
+                        
+                        await twilio.sendMessage(waId, mensaje);
+                    }
                 });
 
                 estados[waId] = {
@@ -232,12 +253,12 @@ app.post('/webhook', async (req, res) => {
                 break;
 
             case 'Diferencia en CC':
-                twilio.sendMessage(waId, "Por favor, escribe una observación sobre lo ocurrido (máximo 300 caracteres). Cualquier información adicional es bienvenida.");
+                twilio.sendMessage(waId, "Para continuar, por favor, escribe el *codigo de factura* de *5 o 6 dígitos (sin ceros)* referido a esta diferencia\n\n"
+                    + "Como dato, las facturas de *6 digitos* corresponden a *facturas tipo A* mientras que las de *5 digitos* a *facturas tipo B*");
                 estados[waId] = {
                     ...estados[waId],
-                    paso: 'guardar',
+                    paso: 'factura',
                     tipo: ListTitle,
-                    cod_factura: 12345,
                     area: ['VENTAS', 'ADMINISTRACION'],
                 };
                 break;
@@ -306,7 +327,6 @@ async function enviarNotificacion(areas) {
         } catch (err) {
             console.error("Error enviando notificación:", err);
 
-            // ⚠️ TIP: si el endpoint ya no es válido, podés borrarlo de la BD
             if (err.statusCode === 410 || err.statusCode === 404) {
                 await prisma.suscripciones.delete({
                     where: { id: sub.id }

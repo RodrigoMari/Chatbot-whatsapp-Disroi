@@ -32,7 +32,7 @@ table {
 
 tbody td:nth-child(7) {
   max-width: 300px; /* ajusta según prefieras */
-  white-space: normal; /* permite salto de línea */
+  white-space: normal;
   overflow-wrap: break-word;
 }
 

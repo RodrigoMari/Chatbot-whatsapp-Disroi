@@ -155,6 +155,7 @@
               <th>Tipo</th>
               <th>Área</th>
               <th>Factura</th>
+              <th>Vendedor</th>
               <th>Observación</th>
               <th>Estado</th>
               <th>Acción</th>
@@ -170,6 +171,7 @@
                 <td><%= r.tipo %></td>
                 <td><%- r.reclamo_area.map(a => a.area).join('<br />') %></td>
                 <td><%= r.cod_factura %></td>
+                <td><%= r.maestro_21?.vendedor_1 %> / <%= r.maestro_21?.vendedor_2 || "-" %></td>
                 <td><%= r.observacion %></td>
                 <td class="estado">
                   <% if (r.estado === 'COMPLETADO') { %>
