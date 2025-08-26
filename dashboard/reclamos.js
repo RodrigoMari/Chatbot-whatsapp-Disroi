@@ -36,7 +36,8 @@ router.get('/', async (req, res) => {
         select: {
           nombre: true,
           vendedor_1: true,
-          vendedor_2: true
+          vendedor_2: true,
+          telefono: true
         }
       },
       reclamo_area: true

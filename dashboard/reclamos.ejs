@@ -152,6 +152,7 @@
               <th>ID</th>
               <th>Código</th>
               <th>Nombre</th>
+              <th>Teléfono</th>
               <th>Tipo</th>
               <th>Área</th>
               <th>Factura</th>
@@ -168,6 +169,7 @@
                 <td><%= r.id %></td>
                 <td><%= r.cliente %></td>
                 <td><%= r.maestro_21?.nombre || "sin nombre" %></td>
+                <td><%= /\d/.test(r.maestro_21?.telefono || "") ? r.maestro_21.telefono : "sin telefono" %></td>
                 <td><%= r.tipo %></td>
                 <td><%- r.reclamo_area.map(a => a.area).join('<br />') %></td>
                 <td><%= r.cod_factura %></td>
@@ -206,9 +208,11 @@
         <p><strong>ID:</strong> <span id="popup-id"></span></p>
         <p><strong>Cliente:</strong> <span id="popup-cliente"></span></p>
         <p><strong>Nombre:</strong> <span id="popup-nombre"></span></p>
+        <p><strong>Teléfono:</strong> <span id="popup-telefono"></span></p>
         <p><strong>Tipo:</strong> <span id="popup-tipo"></span></p>
         <p><strong>Área:</strong> <span id="popup-area"></span></p>
         <p><strong>Factura:</strong> <span id="popup-factura"></span></p>
+        <p><strong>Vendedor:</strong> <span id="popup-vendedor"></span></p>
         <p><strong>Observación:</strong> <span id="popup-observacion"></span></p>
 
         <div class="popup-buttons">
@@ -232,9 +236,11 @@
       document.getElementById("popup-id").textContent = r.id;
       document.getElementById("popup-cliente").textContent = r.cliente;
       document.getElementById("popup-nombre").textContent = r.maestro_21?.nombre || "sin nombre";
+      document.getElementById("popup-telefono").textContent = r.maestro_21?.telefono || "sin telefono";
       document.getElementById("popup-tipo").textContent = r.tipo;
       document.getElementById("popup-area").textContent = r.reclamo_area.map(a => a.area).join(', ');
       document.getElementById("popup-factura").textContent = r.cod_factura;
+      document.getElementById("popup-vendedor").textContent = r.maestro_21?.vendedor_1 + " / " + (r.maestro_21?.vendedor_2 || "sin vendedor");
       document.getElementById("popup-observacion").textContent = r.observacion_completa;
 
       document.getElementById("popup-form-completado").action = "/reclamos/resolver/" + r.id;
