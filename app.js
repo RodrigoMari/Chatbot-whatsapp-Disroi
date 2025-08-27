@@ -103,35 +103,23 @@ app.post('/webhook', async (req, res) => {
     
     //Mensaje de bienvenida
     if (!estados[waId]) {
-        twilio.sendListPicker(waId, soynosoyuser);
-
-        if (req.body.MessageType != 'interactive') {
+        console.log("Nuevo usuario:", req.body);
+        if (req.body.MessageType === 'interactive') {
             switch(body) {
-                case 'Soy usuario':
-                    estados[waId].paso = 'soyusuario';
+                case 'Soy cliente':
+                    estados[waId] = { paso: 'soycliente' };
                     break;
-                case 'No soy usuario':
-                    estados[waId].paso = 'nosoyusuario';
+                case 'No soy cliente':
+                    estados[waId] = { paso: 'nosoycliente' };
                     break;
             }
 
         }
-        estados[waId] = { paso: 'esperando_identificacion' };
-        return;
-    }
-
-    if (estados[waId].paso === 'soyusuario') {
-        await twilio.sendMessage(waId,
-            "🤖 ¡Bienvenido al asistente virtual de *Disroi*! Mi nombre es *Rodri*\n\n" +
-            "Para comenzar, le solicito que me brinde su *código de cliente* (sin ceros) o su *número de documento* para su correcta identificación\n\n" +
-            "Si usted *no es cliente* de la distribuidora le solicitamos que  "
-        );
-    }
-
-    if(estados[waId].paso === 'nosoyusuario') {
-        await twilio.sendMessage(waId,
-            "🤖 Entendido, si no es usuario de *Disroi*, por favor indíquenos cómo podemos ayudarle."
-        );
+        else {
+            twilio.sendListPicker(waId, soynosoyuser);
+            return;
+        }
+                 
     }
 
     //Identificación del usuario
@@ -147,6 +135,70 @@ app.post('/webhook', async (req, res) => {
         }
     }
 
+    if (estados[waId].paso === 'soycliente') {
+        console.log("Identificando cliente...");
+        await twilio.sendMessage(waId,
+            "⭐ Estoy encantado de tenerlo en el equipo de *Disroi*\n\n" +
+            "Para comenzar, le solicito que me brinde su *código de cliente* (sin ceros) o su *número de documento* para su correcta identificación\n\n"
+        );
+
+        estados[waId].paso = 'esperando_identificacion';
+    }
+
+        if(estados[waId].paso === 'esperando_nombre') {
+    estados[waId].nombre = body;
+    estados[waId].registro = "nombre";
+    estados[waId].paso = 'nosoycliente';
+    }
+
+    if(estados[waId].paso === 'esperando_direccion') {
+        estados[waId].direccion = body;
+        estados[waId].registro = "direccion";
+        estados[waId].paso = 'nosoycliente';
+    }
+
+    if(estados[waId].paso === 'esperando_telefono') {
+        estados[waId].telefono = body;
+
+        const observacion = `*Nombre*: ${estados[waId].nombre}\n*Dirección*: ${estados[waId].direccion}\n*Teléfono*: ${estados[waId].telefono}`;
+        //console.log("Datos del nuevo cliente:", observacion);
+
+        await twilio.sendMessage(waId, "✅ ¡Gracias! Hemos registrado sus datos. El vendedor designado de su zona se contactará con usted pronto.\n\n" + 
+            "Resumen de su información:\n" + 
+            observacion);
+        delete estados[waId];
+    }
+
+    if(estados[waId].paso === 'nosoycliente') {
+        if (!estados[waId].registro) {
+            estados[waId].registro = "";
+        }
+
+        if(estados[waId].registro === "direccion"){
+            await twilio.sendMessage(waId,
+                "📞 Finalice proporcionándome su *teléfono de contacto*\n\n" +
+                "Tenga en cuenta que es el número con el cual se comunicará el vendedor, asegúrese de incluir el código de país y de área."
+            );
+            estados[waId].registro = "telefono";
+            estados[waId].paso = 'esperando_telefono';
+        }
+        else if(estados[waId].registro === "nombre"){
+            await twilio.sendMessage(waId,
+                "🏢 Ahora suministre la *dirección de su negocio*\n\n" +
+                "Considere que es la dirección a la cual se acercará el vendedor, asegúrese de incluir todos los detalles necesarios"
+            );
+            estados[waId].registro = "direccion";
+            estados[waId].paso = 'esperando_direccion';
+        }
+        else if(estados[waId].registro === ""){
+            await twilio.sendMessage(waId,
+                "🥺 Lamento mucho que no seas parte de *Disroi*, sin embargo, estoy aquí para registrarte\n\n" + 
+                "Comience brindándome su *nombre completo* o *razón social* con la cual quiere que lo identifiquemos"
+            );
+            estados[waId].registro = "nombre";
+            estados[waId].paso = 'esperando_nombre';
+        }
+    }
 
     //Guardar reclamo
     if (estados[waId]?.paso === 'guardar') {
