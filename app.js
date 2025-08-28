@@ -101,6 +101,49 @@ app.post('/webhook', async (req, res) => {
     const body = req.body.Body;
     const ListTitle = req.body.ListTitle;
     
+    //Guardar reclamo
+    if (estados[waId]?.paso === 'guardar') {
+        const datos = estados[waId];
+
+        if(datos.tipo === 'Nuevo cliente') {
+            datos.observacion = datos.observacion + "\nObservacion: " + body;
+        }
+
+        console.log("Datos del reclamo:", datos);
+        try {
+            await prisma.reclamo.create({
+                data: {
+                    cliente: datos.cliente_id || null,
+                    tipo: datos.tipo,
+                    reclamo_area: {
+                        create: datos.area.map((area) => ({
+                            area: area,
+                        })),
+                    },
+                    cod_factura: parseInt(datos.cod_factura, 10) || null,
+                    estado: 'PENDIENTE',
+                    observacion: datos.observacion || body,
+                }
+            });
+
+            enviarNotificacion(datos.area)
+            prisma.maestro_cliente.findFirst({where: { codigo: datos.cliente_id }
+                }).then(async cliente => {
+                    if (cliente) {
+                        twilio.sendMessage(waId, "✔️ *" + cliente.nombre + "*, gracias por comunicar tu reclamo referido a *" + datos.tipo + "*. En las próximas 72hs recibirá una respuesta por parte del/los responsable/s.");
+                    }
+                });
+
+
+            delete estados[waId];
+            return;
+        } catch (error) {
+            console.error('Error al guardar reclamo:', error);
+            await twilio.sendMessage(waId, "❌ Ocurrió un error al guardar su reclamo. Por favor, intente nuevamente.");
+        }
+        
+    }
+
     //Mensaje de bienvenida
     if (!estados[waId]) {
         console.log("Nuevo usuario:", req.body);
@@ -145,10 +188,10 @@ app.post('/webhook', async (req, res) => {
         estados[waId].paso = 'esperando_identificacion';
     }
 
-        if(estados[waId].paso === 'esperando_nombre') {
-    estados[waId].nombre = body;
-    estados[waId].registro = "nombre";
-    estados[waId].paso = 'nosoycliente';
+    if(estados[waId].paso === 'esperando_nombre') {
+        estados[waId].nombre = body;
+        estados[waId].registro = "nombre";
+        estados[waId].paso = 'nosoycliente';
     }
 
     if(estados[waId].paso === 'esperando_direccion') {
@@ -160,13 +203,20 @@ app.post('/webhook', async (req, res) => {
     if(estados[waId].paso === 'esperando_telefono') {
         estados[waId].telefono = body;
 
-        const observacion = `*Nombre*: ${estados[waId].nombre}\n*Dirección*: ${estados[waId].direccion}\n*Teléfono*: ${estados[waId].telefono}`;
-        //console.log("Datos del nuevo cliente:", observacion);
-
-        await twilio.sendMessage(waId, "✅ ¡Gracias! Hemos registrado sus datos. El vendedor designado de su zona se contactará con usted pronto.\n\n" + 
-            "Resumen de su información:\n" + 
-            observacion);
-        delete estados[waId];
+        const observacion = `*Nombre*: ${estados[waId].nombre}\n` +
+                    `*Dirección*: ${estados[waId].direccion}\n` +
+                    `*Teléfono*: ${estados[waId].telefono}`;
+        await twilio.sendMessage(waId,
+            "⭐​ Resumen de su información:\n" + 
+            observacion + 
+            "\n\nPara finalizar, le pido que escriba cualquier *observacion* adicional sobre su negocio"
+        );
+        estados[waId] = {
+            tipo: 'Nuevo cliente',
+            area: ['VENTAS', 'ADMINISTRACION'],
+            paso: 'guardar',
+            observacion: observacion,
+        };
     }
 
     if(estados[waId].paso === 'nosoycliente') {
@@ -174,68 +224,35 @@ app.post('/webhook', async (req, res) => {
             estados[waId].registro = "";
         }
 
-        if(estados[waId].registro === "direccion"){
-            await twilio.sendMessage(waId,
-                "📞 Finalice proporcionándome su *teléfono de contacto*\n\n" +
-                "Tenga en cuenta que es el número con el cual se comunicará el vendedor, asegúrese de incluir el código de país y de área."
-            );
-            estados[waId].registro = "telefono";
-            estados[waId].paso = 'esperando_telefono';
+        switch (estados[waId].registro) {
+            case "direccion":
+                await twilio.sendMessage(waId,
+                    "📞 Proporcione su *teléfono de contacto*\n\n" +
+                    "Tenga en cuenta que es el número con el cual se comunicará el vendedor, asegúrese de incluir el código de país y de área."
+                );
+                estados[waId].registro = "telefono";
+                estados[waId].paso = 'esperando_telefono';
+                break;
+            case "nombre":
+                await twilio.sendMessage(waId,
+                    "🏢 Ahora suministre la *dirección de su negocio*\n\n" +
+                    "Considere que es la dirección a la cual se acercará el vendedor, asegúrese de incluir todos los detalles necesarios"
+                );
+                estados[waId].registro = "direccion";
+                estados[waId].paso = 'esperando_direccion';
+                break;
+            case "":
+                await twilio.sendMessage(waId,
+                    "🥺 Lamento mucho que no seas parte de *Disroi*, sin embargo, estoy aquí para registrarte\n\n" +
+                    "Te notifico que nuestra zona de atención esta delimitada (teniendo en cuenta solo las manos internas en dichos límites):\n\n" +
+                    "↔️​​ *Oeste a este*: Oroño y Av. Belgrano\n" +
+                    "↕️ *De norte a sur*: Av. Wheelwright y Batlle y Ordóñez\n\n" +
+                    "Comience brindándome su *nombre completo* o *razón social* con la cual quiere que lo identifiquemos, si no se encuentra en nuestra zona, ignorar este proceso"
+                );
+                estados[waId].registro = "nombre";
+                estados[waId].paso = 'esperando_nombre';
+                break;
         }
-        else if(estados[waId].registro === "nombre"){
-            await twilio.sendMessage(waId,
-                "🏢 Ahora suministre la *dirección de su negocio*\n\n" +
-                "Considere que es la dirección a la cual se acercará el vendedor, asegúrese de incluir todos los detalles necesarios"
-            );
-            estados[waId].registro = "direccion";
-            estados[waId].paso = 'esperando_direccion';
-        }
-        else if(estados[waId].registro === ""){
-            await twilio.sendMessage(waId,
-                "🥺 Lamento mucho que no seas parte de *Disroi*, sin embargo, estoy aquí para registrarte\n\n" + 
-                "Comience brindándome su *nombre completo* o *razón social* con la cual quiere que lo identifiquemos"
-            );
-            estados[waId].registro = "nombre";
-            estados[waId].paso = 'esperando_nombre';
-        }
-    }
-
-    //Guardar reclamo
-    if (estados[waId]?.paso === 'guardar') {
-        const datos = estados[waId];
-        console.log("Datos del reclamo:", datos);
-        try {
-            await prisma.reclamo.create({
-                data: {
-                    cliente: datos.cliente_id,
-                    tipo: datos.tipo,
-                    reclamo_area: {
-                        create: datos.area.map((area) => ({
-                            area: area,
-                        })),
-                    },
-                    cod_factura: parseInt(datos.cod_factura, 10) || null,
-                    estado: 'PENDIENTE',
-                    observacion: body || 'Sin observaciones adicionales',
-                }
-            });
-
-            enviarNotificacion(datos.area)
-            prisma.maestro_cliente.findFirst({where: { codigo: datos.cliente_id }
-                }).then(async cliente => {
-                    if (cliente) {
-                        twilio.sendMessage(waId, "✔️ *" + cliente.nombre + "*, gracias por comunicar tu reclamo referido a *" + datos.tipo + "*. En las próximas 72hs recibirá una respuesta por parte del/los responsable/s.");
-                    }
-                });
-
-
-            delete estados[waId];
-            return;
-        } catch (error) {
-            console.error('Error al guardar reclamo:', error);
-            await twilio.sendMessage(waId, "❌ Ocurrió un error al guardar su reclamo. Por favor, intente nuevamente.");
-        }
-        
     }
 
     if (estados[waId]?.paso === 'factura') {
@@ -292,9 +309,16 @@ app.post('/webhook', async (req, res) => {
         //reclamos
         switch (ListTitle) {
             case 'No llegó mi pedido':
-                //pedir num de facturacion y cod cliente
-                //deposito
-                twilio.sendListPicker(waId, noLlegó);
+                twilio.sendMessage(waId, "📜​ Para continuar, por favor, escribe el *codigo de factura* de *5 o 6 dígitos (sin ceros)* referido a esta diferencia\n\n"
+                    + "💡​ Como dato, las facturas de *6 digitos* corresponden a *facturas tipo A* mientras que las de *5 digitos* a *facturas tipo B*");
+                
+                estados[waId] = {
+                    ...estados[waId],
+                    paso: 'factura',
+                    tipo: ListTitle,
+                    area: ['DEPOSITO'],
+                };
+
                 break;
             case 'Me falta un producto':
                 twilio.sendMessage(waId, "📜​ Para continuar, por favor, escribe el *codigo de factura* de *5 o 6 dígitos (sin ceros)* referido a esta diferencia\n\n"
@@ -304,32 +328,13 @@ app.post('/webhook', async (req, res) => {
                     ...estados[waId],
                     paso: 'factura',
                     tipo: ListTitle,
-                    area: ['VENTAS', 'ADMINISTRACION'],
+                    area: ['DEPOSITO'],
                 };
                 break;
                 //deposito
             case 'Mi vendedor no me visitó':
                 twilio.sendMessage(waId, "🙏​ Le pedimos disculpas de parte del equipo de Disroi\n\n"
                             + "⬇️​ Para terminar, escriba alguna observación que nos pueda dar contexto de la situación.");
-
-                /*
-                prisma.maestro_cliente.findFirst({where: { codigo: estados[waId].cliente_id }
-                }).then(async cliente => {
-                    if (cliente) {
-                        let vendedor1 = await prisma.vendedor.findFirst({where: { codigo: cliente.vendedor_1 }});
-                        let vendedor2 = await prisma.vendedor.findFirst({where: { codigo: cliente.vendedor_2 }});
-                        if(vendedor1?.telefono)
-                            mensaje += "Por si los precisa, sus vendedores son:\n\n";
-                            mensaje += `${vendedor1.nombre}: ${vendedor1.telefono}\n\n`;
-                            if(vendedor2?.telefono != null)
-                                mensaje += `${vendedor2.nombre}: ${vendedor2.telefono}\n\n`;
-                        
-                        mensaje += "Para terminar, escriba alguna observación que nos pueda dar contexto de la situación.";
-                        
-                        await twilio.sendMessage(waId, mensaje);
-                    }
-                });
-                */
                 estados[waId] = {
                     ...estados[waId],
                     paso: 'guardar',
@@ -346,7 +351,7 @@ app.post('/webhook', async (req, res) => {
                     ...estados[waId],
                     paso: 'factura',
                     tipo: ListTitle,
-                    area: ['VENTAS', 'ADMINISTRACION'],
+                    area: ['ADMINISTRACION'],
                 };
                 break;
             case 'Solicitud NDC':

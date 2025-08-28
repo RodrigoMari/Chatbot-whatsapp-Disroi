@@ -146,6 +146,10 @@ form {
   min-width: 120px;
 }
 
+.observacion {
+  white-space: pre-line;
+}
+
 .btn-completado {
   background-color: #28a745;
   color: white;
