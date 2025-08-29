@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
+const fs = require('fs');
+const path = require('path');
 const prisma = new PrismaClient();
 
 function serializeBigInt(obj) {
@@ -51,7 +53,8 @@ router.get('/', async (req, res) => {
     if (r.observacion.length > 30) truncatedText += "...";
 
     const reclamoFecha = new Date(r.fecha_tiempo);
-    const diffHoras = Math.floor((now - reclamoFecha) / (1000 * 60 * 60));
+    const diffMs = now - reclamoFecha;
+    const diffHoras = diffMs / (1000 * 60 * 60);
 
     let filaClase = '';
     if (diffHoras > 72 && r.estado !== 'COMPLETADO') filaClase = 'bg-red text-white';
@@ -72,6 +75,80 @@ router.get('/', async (req, res) => {
     estadoSeleccionado: estado,
     areaSeleccionada: area
   });
+});
+
+// Descargar PDF de un reclamo
+router.get('/:id/pdf', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+
+    const reclamo = await prisma.reclamo.findUnique({
+      where: { id },
+      select: { archivoPdf: true },
+    });
+
+    if (!reclamo || !reclamo.archivoPdf) {
+      return res.status(404).send('PDF no encontrado');
+    }
+
+    // Build the full file path
+    const filePath = path.join(__dirname, '..', reclamo.archivoPdf);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).send('Archivo PDF no encontrado en el servidor');
+    }
+
+    // Read the file and send it
+    const fileBuffer = fs.readFileSync(filePath);
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="reclamo-${id}.pdf"`);
+    res.send(fileBuffer);
+    
+  } catch (err) {
+    console.error('Error al descargar PDF:', err);
+    res.status(500).send('Error al descargar PDF');
+  }
+});
+
+// Alternative approach using streams (more memory efficient for large files)
+router.get('/:id/pdf-stream', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+
+    const reclamo = await prisma.reclamo.findUnique({
+      where: { id },
+      select: { archivoPdf: true },
+    });
+
+    if (!reclamo || !reclamo.archivoPdf) {
+      return res.status(404).send('PDF no encontrado');
+    }
+
+    const filePath = path.join(__dirname, '..', reclamo.archivoPdf);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).send('Archivo PDF no encontrado en el servidor');
+    }
+
+    // Set headers
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="reclamo-${id}.pdf"`);
+    
+    // Create read stream and pipe to response
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+    
+    fileStream.on('error', (err) => {
+      console.error('Error streaming PDF:', err);
+      res.status(500).send('Error al descargar PDF');
+    });
+    
+  } catch (err) {
+    console.error('Error al descargar PDF:', err);
+    res.status(500).send('Error al descargar PDF');
+  }
 });
 
 router.post('/resolver/:id', async (req, res) => {

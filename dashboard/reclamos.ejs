@@ -16,6 +16,7 @@
       <option value="VENTAS">VENTAS</option>
       <option value="DEPOSITO">DEPOSITO</option>
       <option value="ADMINISTRACION">ADMINISTRACION</option>
+      <option value="RRHH">RRHH</option>
     </select>
 
     <button id="subscribe" class="btn btn-primary">Suscribirme</button>
@@ -31,7 +32,13 @@
 
     async function checkSubscription() {
       try {
-        const res = await fetch('/check-subscription');
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (!registration) return false;
+        
+        const subscription = await registration.pushManager.getSubscription();
+        if (!subscription) return false;
+        
+        const res = await fetch(`/check-subscription?endpoint=${encodeURIComponent(subscription.endpoint)}`);
         if (!res.ok) throw new Error('Error verificando suscripción');
         const data = await res.json();
         return data.exists;
@@ -159,6 +166,7 @@
               <th>Vendedor</th>
               <th>Observación</th>
               <th>Estado</th>
+              <th>CV</th>
               <th>Acción</th>
             </tr>
           </thead>
@@ -167,7 +175,7 @@
               <tr>
                 <td class="<%= r.filaClase %>"><%= new Date(r.fecha_tiempo).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }) %></td>
                 <td><%= r.id %></td>
-                <td><%= r.cliente %></td>
+                <td><%= parseInt(r.cliente, 10) %></td>
                 <td><%= r.maestro_21?.nombre || "sin nombre" %></td>
                 <td><%= /\d/.test(r.maestro_21?.telefono || "") ? r.maestro_21.telefono : "sin telefono" %></td>
                 <td><%= r.tipo %></td>
@@ -184,6 +192,15 @@
                     <span class="badge bg-warning text-dark">⏳</span>
                   <% } else { %>
                     <span class="badge bg-secondary">❓</span>
+                  <% } %>
+                </td>
+                <td>
+                  <% if (r.archivoPdf) { %>
+                    <a href="/reclamos/<%= r.id %>/pdf" class="btn btn-sm btn-success">
+                      📄 Descargar
+                    </a>
+                  <% } else { %>
+                    <span class="text-muted">Sin PDF</span>
                   <% } %>
                 </td>
                 <td>

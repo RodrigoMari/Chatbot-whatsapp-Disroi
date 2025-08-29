@@ -22,6 +22,7 @@ const allowedIPs = [
     '179.60.217.196',  // Yo ip local
     '181.92.200.67',  // admin Fran
     '186.182.43.30',  // admin Rodri
+    '186.182.43.30',  // RRHH Vir
     //'192.168.110.179',  // depo Cesar
 ];
 
@@ -56,7 +57,8 @@ const blockNgrokAccess = (req, res, next) => {
 
 const path = require('path');
 
-const soynosoyuser = "HX1fcc6151ea00b8b99dabbb215c02412e"
+const soynosoyuser = "HX9e184160bf10f041ed5747ae4db5d422"
+const nosoycliente = "HXa9f819aaf4ccf4bed51bbf64d009911e"
 
 const main = "HX6870b1d969384339885c8fa36ad104b0"
 
@@ -68,6 +70,7 @@ const noLlegó = "HX0cba42d4b6fdc98e57f029ad7df3b574";
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 async function identificarUsuario(waId, body) {
     //busqueda por codigo de cliente
@@ -101,15 +104,36 @@ app.post('/webhook', async (req, res) => {
     const body = req.body.Body;
     const ListTitle = req.body.ListTitle;
     
-    //Guardar reclamo
     if (estados[waId]?.paso === 'guardar') {
         const datos = estados[waId];
+
+        let archivoPdfPath = null;
+        if (req.body.NumMedia && parseInt(req.body.NumMedia) > 0) {
+            const mediaUrl = req.body.MediaUrl0;
+            const fileName = `${Date.now()}-${waId}.pdf`;
+            const filePath = path.join(__dirname, "uploads", fileName);
+
+            const axios = require("axios");
+            try {
+                const response = await axios.get(mediaUrl, {
+                    responseType: "arraybuffer",
+                    auth: {
+                        username: process.env.TWILIO_ACCOUNT_SID,
+                        password: process.env.TWILIO_AUTH_TOKEN
+                    }
+                });
+                fs.writeFileSync(filePath, response.data);
+                archivoPdfPath = "uploads/" + fileName;
+            } catch (err) {
+                console.error("Error descargando PDF:", err);
+            }
+        }
 
         if(datos.tipo === 'Nuevo cliente') {
             datos.observacion = datos.observacion + "\nObservacion: " + body;
         }
 
-        console.log("Datos del reclamo:", datos);
+        //console.log("Datos del reclamo:", datos);
         try {
             await prisma.reclamo.create({
                 data: {
@@ -122,6 +146,7 @@ app.post('/webhook', async (req, res) => {
                     },
                     cod_factura: parseInt(datos.cod_factura, 10) || null,
                     estado: 'PENDIENTE',
+                    archivoPdf: archivoPdfPath || null,
                     observacion: datos.observacion || body,
                 }
             });
@@ -152,7 +177,7 @@ app.post('/webhook', async (req, res) => {
                 case 'Soy cliente':
                     estados[waId] = { paso: 'soycliente' };
                     break;
-                case 'No soy cliente':
+                case 'No soy cliente | CV':
                     estados[waId] = { paso: 'nosoycliente' };
                     break;
             }
@@ -179,7 +204,6 @@ app.post('/webhook', async (req, res) => {
     }
 
     if (estados[waId].paso === 'soycliente') {
-        console.log("Identificando cliente...");
         await twilio.sendMessage(waId,
             "⭐ Estoy encantado de tenerlo en el equipo de *Disroi*\n\n" +
             "Para comenzar, le solicito que me brinde su *código de cliente* (sin ceros) o su *número de documento* para su correcta identificación\n\n"
@@ -191,13 +215,13 @@ app.post('/webhook', async (req, res) => {
     if(estados[waId].paso === 'esperando_nombre') {
         estados[waId].nombre = body;
         estados[waId].registro = "nombre";
-        estados[waId].paso = 'nosoycliente';
+        estados[waId].paso = 'registrarusuario';
     }
 
     if(estados[waId].paso === 'esperando_direccion') {
         estados[waId].direccion = body;
         estados[waId].registro = "direccion";
-        estados[waId].paso = 'nosoycliente';
+        estados[waId].paso = 'registrarusuario';
     }
 
     if(estados[waId].paso === 'esperando_telefono') {
@@ -213,13 +237,36 @@ app.post('/webhook', async (req, res) => {
         );
         estados[waId] = {
             tipo: 'Nuevo cliente',
-            area: ['VENTAS', 'ADMINISTRACION'],
+            area: ['RRHH'],
             paso: 'guardar',
             observacion: observacion,
         };
     }
 
     if(estados[waId].paso === 'nosoycliente') {
+        if (req.body.ButtonText !== 'No soy cliente | CV') {
+            switch(body) {
+                case 'Registrar usuario':
+                    estados[waId] = { paso: 'registrarusuario' };
+                    break;
+                case 'Entregar curriculum':
+                    estados[waId] = { paso: 'curriculum' };
+                    break;
+                case 'Volver al menú anterior':
+                    twilio.sendListPicker(waId, soynosoyuser);
+                    break;
+            }
+
+        }
+        else {
+            twilio.sendListPicker(waId, nosoycliente);
+            return;
+        }
+
+    }
+
+    if(estados[waId].paso === 'registrarusuario') {
+        console.log("Nuevo usuario:", req.body);
         if (!estados[waId].registro) {
             estados[waId].registro = "";
         }
@@ -467,11 +514,17 @@ async function saveSubscription(sub) {
 }
 
 app.get('/check-subscription', async (req, res) => {
-  try {
-    const clientIP = req.ip?.replace(/^::ffff:/, '') || null;
-
-    const exists = await prisma.suscripciones.findFirst({
-      where: { ip: clientIP }
+    try {
+        const { endpoint } = req.query;
+        
+        if (!endpoint) {
+        return res.json({ exists: false });
+        }
+        
+        const exists = await prisma.suscripciones.findFirst({
+        where: {
+            endpoint: endpoint
+        }
     });
 
     res.json({ exists: !!exists });
@@ -491,13 +544,9 @@ app.post('/subscribe', blockNgrokAccess, checkIPWhitelist, express.json(), async
   const { subscription, area, nombre } = req.body;
   const clientIP = req.ip?.replace(/^::ffff:/, '') || null;
 
-  const { endpoint } = req.query;
   const exists = await prisma.suscripciones.findFirst({
     where: {
-        OR: [
-        { ip: clientIP },
-        { endpoint: endpoint || "" }
-        ]
+      endpoint: subscription.endpoint
     }
   });
 

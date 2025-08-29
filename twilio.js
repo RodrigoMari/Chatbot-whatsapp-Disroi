@@ -25,7 +25,6 @@ async function sendListPicker(to, template, variables) {
       contentSid: template,
       contentVariables: JSON.stringify(variables),
     });
-    console.log('Enviado:', msg.sid);
   } catch (err) {
     console.error('Error al enviar lista interactiva:', err);
     throw err;
