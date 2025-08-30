@@ -237,7 +237,7 @@ app.post('/webhook', async (req, res) => {
         );
         estados[waId] = {
             tipo: 'Nuevo cliente',
-            area: ['RRHH'],
+            area: ['VENTAS', 'ADMINISTRACION'],
             paso: 'guardar',
             observacion: observacion,
         };
@@ -263,6 +263,18 @@ app.post('/webhook', async (req, res) => {
             return;
         }
 
+    }
+
+    if(estados[waId].paso === 'curriculum') {
+        await twilio.sendMessage(waId,"Me enorgullese que quieras formar parte de *Disroi*\n\n" +
+            "📄 Por favor, envíe su *currículum* en formato PDF, además de cualquier información que quieras agregar (maximo 300 caracteres)\n\n" +
+            "Asegúrese de enviar todo en 1 solo mensaje"
+        );
+        estados[waId] = {
+            tipo: 'Solicitud de trabajo',
+            area: ['RRHH'],
+            paso: 'guardar',
+        };
     }
 
     if(estados[waId].paso === 'registrarusuario') {

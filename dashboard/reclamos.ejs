@@ -175,13 +175,13 @@
               <tr>
                 <td class="<%= r.filaClase %>"><%= new Date(r.fecha_tiempo).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }) %></td>
                 <td><%= r.id %></td>
-                <td><%= parseInt(r.cliente, 10) %></td>
+                <td><%= parseInt(r.cliente, 10) || "sin codigo" %></td>
                 <td><%= r.maestro_21?.nombre || "sin nombre" %></td>
                 <td><%= /\d/.test(r.maestro_21?.telefono || "") ? r.maestro_21.telefono : "sin telefono" %></td>
                 <td><%= r.tipo %></td>
                 <td><%- r.reclamo_area.map(a => a.area).join('<br />') %></td>
-                <td><%= r.cod_factura %></td>
-                <td><%= r.maestro_21?.vendedor_1 %> / <%= r.maestro_21?.vendedor_2 || "-" %></td>
+                <td><%= r.cod_factura || "sin factura" %></td>
+                <td><%= r.maestro_21?.vendedor_1 || "-" %> / <%= r.maestro_21?.vendedor_2 || "-" %></td>
                 <td><%= r.observacion %></td>
                 <td class="estado">
                   <% if (r.estado === 'COMPLETADO') { %>
@@ -233,14 +233,19 @@
         <p><strong>Observación:</strong> <span class="observacion" id="popup-observacion"></span></p>
 
         <div class="popup-buttons">
-          <form method="POST" id="popup-form-completado">
-            <button type="submit" class="btn btn-success w-100">✅ Completado</button>
+          <form id="popup-form-pendiente" method="POST">
+            <input type="hidden" name="endpoint" id="endpoint-pendiente">
+            <button type="submit" class="btn btn-warning text-dark w-100">⏳ Pendiente</button>
           </form>
-          <form method="POST" id="popup-form-en-proceso">
+          
+          <form id="popup-form-en-proceso" method="POST">
+            <input type="hidden" name="endpoint" id="endpoint-en-proceso">
             <button type="submit" class="btn btn-primary w-100">🔄 En proceso</button>
           </form>
-          <form method="POST" id="popup-form-pendiente">
-            <button type="submit" class="btn btn-warning text-dark w-100">⏳ Pendiente</button>
+
+          <form id="popup-form-completado" method="POST">
+            <input type="hidden" name="endpoint" id="endpoint-completado">
+            <button type="submit" class="btn btn-success w-100">✅ Completado</button>
           </form>
           <button type="button" onclick="cerrarPopup()" class="btn btn-secondary w-100">❌ Cancelar</button>
         </div>
@@ -248,21 +253,38 @@
     </div>
   </div>
   <script>
-    function mostrarPopup(r) {
+    async function mostrarPopup(r) {
       document.getElementById("popup-fecha").textContent = new Date(r.fecha_tiempo).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
       document.getElementById("popup-id").textContent = r.id;
-      document.getElementById("popup-cliente").textContent = r.cliente;
+      document.getElementById("popup-cliente").textContent = r.cliente || "sin codigo";
       document.getElementById("popup-nombre").textContent = r.maestro_21?.nombre || "sin nombre";
       document.getElementById("popup-telefono").textContent = r.maestro_21?.telefono || "sin telefono";
       document.getElementById("popup-tipo").textContent = r.tipo;
       document.getElementById("popup-area").textContent = r.reclamo_area.map(a => a.area).join(', ');
-      document.getElementById("popup-factura").textContent = r.cod_factura;
-      document.getElementById("popup-vendedor").textContent = r.maestro_21?.vendedor_1 + " / " + (r.maestro_21?.vendedor_2 || "sin vendedor");
+      document.getElementById("popup-factura").textContent = r.cod_factura || "sin factura";
+      document.getElementById("popup-vendedor").textContent = (r.maestro_21?.vendedor_1 || "sin vendedor") + " / " + (r.maestro_21?.vendedor_2 || "sin vendedor");
       document.getElementById("popup-observacion").textContent = r.observacion_completa;
 
       document.getElementById("popup-form-completado").action = "/reclamos/resolver/" + r.id;
       document.getElementById("popup-form-en-proceso").action = "/reclamos/en_proceso/" + r.id;
       document.getElementById("popup-form-pendiente").action = "/reclamos/pendiente/" + r.id;
+
+      async function setEndpointInputs() {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (!registration) return;
+
+        const subscription = await registration.pushManager.getSubscription();
+        if (!subscription) return;
+
+        const endpoint = subscription.endpoint;
+
+        document.getElementById("endpoint-en-proceso").value = endpoint;
+        document.getElementById("endpoint-completado").value = endpoint;
+        document.getElementById("endpoint-pendiente").value = endpoint;
+      }
+
+      await setEndpointInputs();
+
 
       document.getElementById("popup").classList.remove("d-none");
       document.getElementById("popup").classList.add("d-flex");
