@@ -390,7 +390,6 @@ app.post('/webhook', async (req, res) => {
                     area: ['DEPOSITO'],
                 };
                 break;
-                //deposito
             case 'Mi vendedor no me visitó':
                 twilio.sendMessage(waId, "🙏​ Le pedimos disculpas de parte del equipo de Disroi\n\n"
                             + "⬇️​ Para terminar, escriba alguna observación que nos pueda dar contexto de la situación.");
@@ -545,8 +544,6 @@ app.get('/check-subscription', async (req, res) => {
     res.json({ exists: false });
   }
 });
-
-
 
 app.get('/vapidPublicKey', blockNgrokAccess, checkIPWhitelist, (req, res) => {
   res.send(process.env.VAPID_PUBLIC_KEY);

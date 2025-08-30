@@ -14,6 +14,8 @@ model reclamo {
   tipo         String?          @default("")
   cod_factura  Int?
   estado       reclamo_estado?  @default(PENDIENTE)
+  tomado_por   String?          @db.VarChar(30)
+  fecha_tomado DateTime?        @db.DateTime(0)
   archivoPdf   String?          @db.VarChar(255)
   observacion  String?          @db.VarChar(300)
   maestro_21   maestro_cliente? @relation(fields: [cliente], references: [codigo], onDelete: Restrict, onUpdate: Restrict, map: "fk_cliente_codigo")
