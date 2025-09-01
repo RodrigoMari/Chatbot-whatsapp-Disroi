@@ -106,7 +106,6 @@ app.post('/webhook', async (req, res) => {
     
     if (estados[waId]?.paso === 'guardar') {
         const datos = estados[waId];
-
         let archivoPdfPath = null;
         if (req.body.NumMedia && parseInt(req.body.NumMedia) > 0) {
             const mediaUrl = req.body.MediaUrl0;
@@ -133,6 +132,10 @@ app.post('/webhook', async (req, res) => {
             datos.observacion = datos.observacion + "\nObservacion: " + body;
         }
 
+        if(datos.tipo === 'Me falta un producto' || datos.tipo === 'Solicitud NDC') {
+            datos.observacion = datos.observacion + "\nObservacion: " + body;
+        }
+
         //console.log("Datos del reclamo:", datos);
         try {
             await prisma.reclamo.create({
@@ -151,11 +154,11 @@ app.post('/webhook', async (req, res) => {
                 }
             });
 
-            enviarNotificacion(datos.area)
+            enviarNotificacion(datos.area, `Reclamo "${datos.tipo}" de cliente ID "${datos.cliente_id || "No identificado"}"`);
             prisma.maestro_cliente.findFirst({where: { codigo: datos.cliente_id }
                 }).then(async cliente => {
                     if (cliente) {
-                        twilio.sendMessage(waId, "✔️ *" + cliente.nombre + "*, gracias por comunicar tu reclamo referido a *" + datos.tipo + "*. En las próximas 72hs recibirá una respuesta por parte del/los responsable/s.");
+                        twilio.sendMessage(waId, "✅ *" + cliente.nombre + "*, gracias por comunicar tu reclamo referido a *" + datos.tipo + "*. En las próximas 72hs recibirá una respuesta por parte del/los responsable/s.");
                     }
                 });
 
@@ -181,7 +184,6 @@ app.post('/webhook', async (req, res) => {
                     estados[waId] = { paso: 'nosoycliente' };
                     break;
             }
-
         }
         else {
             twilio.sendListPicker(waId, soynosoyuser);
@@ -314,24 +316,52 @@ app.post('/webhook', async (req, res) => {
         }
     }
 
-    if (estados[waId]?.paso === 'factura') {
-        if(body.length > 6 || body.length < 5) {
-            twilio.sendMessage(waId, "❌ El código de factura debe tener 5 o 6 caracteres.\n\n"
-                + "💡​ Recuerde, las facturas de *6 digitos* corresponden a *facturas tipo A* mientras que las de *5 digitos* a *facturas tipo B*.");
-            return;
-        }
-
-        if(ListTitle == 'Me falta un producto') {
-            twilio.sendMessage(waId, "Para termina de registrar su reclamo le pido que nos comunique, en 1 solo mensaje, qué productos faltan.\n\n"
-            + "💡​ Por favor, mencione los códigos de producto especificados en la factura para que no haya confusión.");
-        }
-        else twilio.sendMessage(waId, "Perfecto. Ahora, por favor, escriba alguna observación que nos pueda dar contexto de la situación (máximo 300 caracteres).");
-
+    if (estados[waId]?.paso === 'productos') {
+        twilio.sendMessage(waId, "Perfecto. Ahora, por favor, escriba alguna observación que nos pueda dar contexto de la situación (máximo 300 caracteres).");
         estados[waId] = {
             ...estados[waId],
             paso: 'guardar',
-            cod_factura: body,
+            observacion: "Productos: " + body,
         };
+    }
+
+    if (estados[waId]?.paso === 'factura') {
+        if(body.length > 6 || body.length < 5) {
+            twilio.sendMessage(waId, "❌ El código de factura debe tener 5 o 6 caracteres.\n\n"
+                + "💡​ Recuerde, las facturas de *6 digitos* corresponden a *facturas tipo A* mientras que las de *5 digitos* a *facturas tipo B*");
+            return;
+        }
+
+        switch (estados[waId]?.tipo) {
+            case 'Me falta un producto':
+                twilio.sendMessage(waId, "Para terminar de registrar su reclamo le pido que nos comunique, en 1 solo mensaje, qué *productos* faltan.\n\n"
+                    + "💡​ Por favor, mencione los códigos de producto especificados en la factura para que no haya confusión");
+                estados[waId] = {
+                    ...estados[waId],
+                    paso: 'productos',
+                    cod_factura: body,
+                };
+                break;
+
+            case 'Solicitud NDC':
+                twilio.sendMessage(waId, "Para terminar de registrar su reclamo le pido que nos comunique, en 1 solo mensaje, qué *productos* son los implicados.\n\n"
+                    + "💡 Por favor, mencione solo los códigos de productos a los que le falta la nota de crédito.");
+
+                estados[waId] = {
+                    ...estados[waId],
+                    paso: 'productos',
+                    cod_factura: body,
+                };
+                break;
+
+            default:
+                twilio.sendMessage(waId, "Perfecto. Ahora, por favor, escriba alguna observación que nos pueda dar contexto de la situación (máximo 300 caracteres).");
+                estados[waId] = {
+                    ...estados[waId],
+                    paso: 'guardar',
+                    cod_factura: body,
+                };
+        }
     }
 
     //Flujo principal
@@ -413,8 +443,14 @@ app.post('/webhook', async (req, res) => {
                 };
                 break;
             case 'Solicitud NDC':
-                //pedir codigos de productos para hacer la nota de credito
-                //avisarle al vendedor directamente que no se hizo la nota de crédito
+                twilio.sendMessage(waId, "📜 Para continuar, por favor, escribe el *codigo de factura* de *5 o 6 dígitos (sin ceros)* para hacer la nota de crédito\n\n"
+                    + "💡 Como dato, las facturas de *6 digitos* corresponden a *facturas tipo A* mientras que las de *5 digitos* a *facturas tipo B*");
+                estados[waId] = {
+                    ...estados[waId],
+                    paso: 'factura',
+                    tipo: ListTitle,
+                    area: ['ADMINISTRACION', 'VENTAS'],
+                };
                 break;
             case 'Requiero atención':
                 let mensaje = "";
@@ -473,10 +509,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 const reclamosRouter = require('./dashboard/reclamos');
 app.use('/reclamos', blockNgrokAccess, checkIPWhitelist, reclamosRouter);
 
-async function enviarNotificacion(areas) {
+async function enviarNotificacion(areas, mensaje = "Reclamo en estado pendiente") {
     const payload = JSON.stringify({
         title: 'Nuevo reclamo',
-        body: `Hay un reclamo nuevo en estado PENDIENTE`
+        body: mensaje
     });
     
     const subs = await prisma.suscripciones.findMany({
