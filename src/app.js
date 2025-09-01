@@ -1,18 +1,10 @@
 const express = require('express');
 const twilio = require('./twilio.js');
-const { ListItem } = require('twilio/lib/rest/content/v1/content.js');
 const { PrismaClient } = require('@prisma/client');
-const Sync = require('twilio/lib/rest/Sync.js');
-const { empty } = require('@prisma/client/runtime/library');
 const https = require('https');
 const fs = require('fs');
-const webpush = require('web-push');
-
-webpush.setVapidDetails(
-  'mailto:rodrigojuanmari@gmail.com',
-  process.env.VAPID_PUBLIC_KEY,
-  process.env.VAPID_PRIVATE_KEY
-);
+const cron = require("node-cron");
+const { enviarNotificacionesVencidas, enviarNotificacion } = require("./send_notifications.js");
 
 const prisma = new PrismaClient();
 const estados = {};
@@ -70,7 +62,16 @@ const noLlegó = "HX0cba42d4b6fdc98e57f029ad7df3b574";
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Enviar notificaciones a las 24, 48 y 72 horas
+cron.schedule("0 12 * * *", async () => {
+  console.log("⏰ Ejecutando envío de notificaciones de reclamos pendientes >24h...");
+  await enviarNotificacionesVencidas();
+}, {
+  scheduled: true,
+  timezone: "America/Argentina/Buenos_Aires" // Ajusta la zona horaria
+});
 
 async function identificarUsuario(waId, body) {
     //busqueda por codigo de cliente
@@ -110,7 +111,7 @@ app.post('/webhook', async (req, res) => {
         if (req.body.NumMedia && parseInt(req.body.NumMedia) > 0) {
             const mediaUrl = req.body.MediaUrl0;
             const fileName = `${Date.now()}-${waId}.pdf`;
-            const filePath = path.join(__dirname, "uploads", fileName);
+            const filePath = path.join(__dirname, "../uploads", fileName);
 
             const axios = require("axios");
             try {
@@ -129,11 +130,11 @@ app.post('/webhook', async (req, res) => {
         }
 
         if(datos.tipo === 'Nuevo cliente') {
-            datos.observacion = datos.observacion + "\nObservacion: " + body;
+            datos.observacion = datos.observacion + "\nObservación: " + body;
         }
 
         if(datos.tipo === 'Me falta un producto' || datos.tipo === 'Solicitud NDC') {
-            datos.observacion = datos.observacion + "\nObservacion: " + body;
+            datos.observacion = datos.observacion + "\nObservación: " + body;
         }
 
         //console.log("Datos del reclamo:", datos);
@@ -158,7 +159,7 @@ app.post('/webhook', async (req, res) => {
             prisma.maestro_cliente.findFirst({where: { codigo: datos.cliente_id }
                 }).then(async cliente => {
                     if (cliente) {
-                        twilio.sendMessage(waId, "✅ *" + cliente.nombre + "*, gracias por comunicar tu reclamo referido a *" + datos.tipo + "*. En las próximas 72hs recibirá una respuesta por parte del/los responsable/s.");
+                        twilio.sendMessage(waId, "✅ *" + (cliente.nombre || " ") + "*, Gracias por comunicar tu reclamo referido a *" + datos.tipo + "*. En las próximas 72hs recibirá una respuesta por parte del/los responsable/s.");
                     }
                 });
 
@@ -235,7 +236,7 @@ app.post('/webhook', async (req, res) => {
         await twilio.sendMessage(waId,
             "⭐​ Resumen de su información:\n" + 
             observacion + 
-            "\n\nPara finalizar, le pido que escriba cualquier *observacion* adicional sobre su negocio"
+            "\n\nPara finalizar, le pido que escriba cualquier *observación* adicional sobre su negocio"
         );
         estados[waId] = {
             tipo: 'Nuevo cliente',
@@ -270,7 +271,7 @@ app.post('/webhook', async (req, res) => {
     if(estados[waId].paso === 'curriculum') {
         await twilio.sendMessage(waId,"Me enorgullese que quieras formar parte de *Disroi*\n\n" +
             "📄 Por favor, envíe su *currículum* en formato PDF, además de cualquier información que quieras agregar (maximo 300 caracteres)\n\n" +
-            "Asegúrese de enviar todo en 1 solo mensaje"
+            "💡 Asegúrese de enviar todo en 1 solo mensaje"
         );
         estados[waId] = {
             tipo: 'Solicitud de trabajo',
@@ -317,7 +318,7 @@ app.post('/webhook', async (req, res) => {
     }
 
     if (estados[waId]?.paso === 'productos') {
-        twilio.sendMessage(waId, "Perfecto. Ahora, por favor, escriba alguna observación que nos pueda dar contexto de la situación (máximo 300 caracteres).");
+        twilio.sendMessage(waId, "Perfecto. Ahora, por favor, escriba alguna *observación* que nos pueda dar contexto de la situación (máximo 300 caracteres).");
         estados[waId] = {
             ...estados[waId],
             paso: 'guardar',
@@ -503,48 +504,12 @@ app.post('/webhook', async (req, res) => {
 });
 
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'dashboard'));
-app.use(express.static(path.join(__dirname, 'dashboard')), blockNgrokAccess, checkIPWhitelist);
+app.set('views', path.join(__dirname, '../dashboard'));
+app.use(express.static(path.join(__dirname, '../dashboard')), blockNgrokAccess, checkIPWhitelist);
 app.use(express.static(path.join(__dirname, 'public')));
-const reclamosRouter = require('./dashboard/reclamos');
+const reclamosRouter = require('../dashboard/reclamos.js');
 app.use('/reclamos', blockNgrokAccess, checkIPWhitelist, reclamosRouter);
 
-async function enviarNotificacion(areas, mensaje = "Reclamo en estado pendiente") {
-    const payload = JSON.stringify({
-        title: 'Nuevo reclamo',
-        body: mensaje
-    });
-    
-    const subs = await prisma.suscripciones.findMany({
-        where: {
-            area: { in: areas }
-        }
-    });
-
-    for (const sub of subs) {
-        const pushSub = {
-            endpoint: sub.endpoint,
-            expirationTime: sub.expirationTime,
-            keys: {
-                p256dh: sub.p256dh,
-                auth: sub.auth
-            }
-        };
-
-        try {
-            await webpush.sendNotification(pushSub, payload);
-        } catch (err) {
-            console.error("Error enviando notificación:", err);
-
-            if (err.statusCode === 410 || err.statusCode === 404) {
-                await prisma.suscripciones.delete({
-                    where: { id: sub.id }
-                });
-                console.log(`Suscripción eliminada (endpoint inválido): ${sub.endpoint}`);
-            }
-        }
-    }
-}
 
 async function saveSubscription(sub) {
   await prisma.suscripciones.create({
@@ -615,9 +580,11 @@ app.post('/subscribe', blockNgrokAccess, checkIPWhitelist, express.json(), async
   res.status(201).json({});
 });
 
+module.exports = { enviarNotificacion };
+
 const options = {
-  key: fs.readFileSync('key.pem'),
-  cert: fs.readFileSync('cert.pem')
+  key: fs.readFileSync(path.join(__dirname, "../key.pem")),
+  cert: fs.readFileSync(path.join(__dirname, "../cert.pem"))
 };
 
 https.createServer(options, app).listen(3443, () => {
