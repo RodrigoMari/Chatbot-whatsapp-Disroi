@@ -54,7 +54,7 @@ const nosoycliente = "HXa9f819aaf4ccf4bed51bbf64d009911e"
 
 const main = "HX6870b1d969384339885c8fa36ad104b0"
 
-const reclamo = "HX6e0e0c38732d2da69eb30496f53f491f"
+const reclamo = "HX4f328453bfcfbdaaa70d5a4cb85527dd"
 const pedido = "HX25d7f54ba8b3d54d947652ffac9b8703"
 const sobreNosotros = "HXfc73d64a5f842aded7fac0af5d082fff"
 
@@ -70,7 +70,7 @@ cron.schedule("0 12 * * *", async () => {
   await enviarNotificacionesVencidas();
 }, {
   scheduled: true,
-  timezone: "America/Argentina/Buenos_Aires" // Ajusta la zona horaria
+  timezone: "America/Argentina/Buenos_Aires"
 });
 
 async function identificarUsuario(waId, body) {
@@ -154,15 +154,15 @@ app.post('/webhook', async (req, res) => {
                     observacion: datos.observacion || body,
                 }
             });
-
             enviarNotificacion(datos.area, `Reclamo "${datos.tipo}" de cliente ID "${datos.cliente_id || "No identificado"}"`);
-            prisma.maestro_cliente.findFirst({where: { codigo: datos.cliente_id }
-                }).then(async cliente => {
+            if(datos.cliente_id) {
+                    const cliente = await prisma.maestro_cliente.findFirst({where: { codigo: datos.cliente_id }});
                     if (cliente) {
                         twilio.sendMessage(waId, "✅ *" + (cliente.nombre || " ") + "*, Gracias por comunicar tu reclamo referido a *" + datos.tipo + "*. En las próximas 72hs recibirá una respuesta por parte del/los responsable/s.");
                     }
-                });
-
+            } else {
+                twilio.sendMessage(waId, `✅ Gracias por comunicar tu reclamo referido a *${datos.tipo}*. En las próximas 72hs recibirá una respuesta por parte del/los responsable/s.`);
+            }
 
             delete estados[waId];
             return;
@@ -480,6 +480,16 @@ app.post('/webhook', async (req, res) => {
                 };
 
                 break;
+            case 'Reclamo alternativo':
+                twilio.sendMessage(waId, "🚀 Estoy en constante mejora para una mejor atención\n\n"
+                            + "Registre su reclamo escribiendo sus inconvenientes, si el reclamo es recurrente, será agregado al flujo en el futuro");
+                estados[waId] = {
+                    ...estados[waId],
+                    paso: 'guardar',
+                    tipo: ListTitle,
+                    area: ['VENTAS', 'ADMINISTRACION', 'DEPOSITO'],
+                };
+                break;
         }
 
         switch (ListTitle) {
@@ -506,7 +516,7 @@ app.post('/webhook', async (req, res) => {
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../dashboard'));
 app.use(express.static(path.join(__dirname, '../dashboard')), blockNgrokAccess, checkIPWhitelist);
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, '../public')));
 const reclamosRouter = require('../dashboard/reclamos.js');
 app.use('/reclamos', blockNgrokAccess, checkIPWhitelist, reclamosRouter);
 

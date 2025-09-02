@@ -115,7 +115,26 @@
   <div id="main-content" class="d-none">
     <div class="container my-5">
       <h1 class="text-center fw-bold mb-4">Gestión de Reclamos</h1>
-
+      <button id="reporte" class="btn btn-primary mb-3">Generar Reporte</button>
+      <div id="popup-reporte" class="popup-overlay d-none">
+      <div class="popup-content">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <h5>Generar Reporte de Reclamos</h5>
+          <button type="button" onclick="cerrarPopup('reporte')" class="btn btn-secondary">❌</button>
+        </div>
+        <form id="popup-form-reporte" method="GET" action="/reclamos/reporte">
+          <div class="mb-3">
+            <label for="fecha-desde" class="form-label">Fecha desde:</label>
+            <input type="date" id="fecha-desde" name="fecha_desde" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label for="fecha-hasta" class="form-label">Fecha hasta:</label>
+            <input type="date" id="fecha-hasta" name="fecha_hasta" class="form-control">
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Generar Reporte</button>
+        </form>
+        </div>
+      </div>
       <!-- Filtro de estado -->
       <form method="GET" action="/reclamos" class="d-flex justify-content-end mb-4">
         <select class="form-select filtro-estado" name="estado" onchange="this.form.submit()">
@@ -218,7 +237,7 @@
     </div>
 
     <!-- Popup -->
-    <div id="popup" class="popup-overlay d-none">
+    <div id="popup-reclamo" class="popup-overlay d-none">
       <div class="popup-content">
         <div class="d-flex justify-content-between align-items-start">
           <h5 class="mb-4">Detalles del Reclamo</h5>
@@ -253,7 +272,7 @@
             <input type="hidden" name="endpoint" id="endpoint-completado">
             <button type="submit" class="btn btn-success w-100">✅ Completado</button>
           </form>
-          <button type="button" onclick="cerrarPopup()" class="btn btn-secondary w-100">❌ Cancelar</button>
+          <button type="button" onclick="cerrarPopup('reclamo')" class="btn btn-secondary w-100">❌ Cancelar</button>
         </div>
       </div>
     </div>
@@ -296,13 +315,23 @@
       await setEndpointInputs();
 
 
-      document.getElementById("popup").classList.remove("d-none");
-      document.getElementById("popup").classList.add("d-flex");
+      document.getElementById("popup-reclamo").classList.remove("d-none");
+      document.getElementById("popup-reclamo").classList.add("d-flex");
     }
 
-    function cerrarPopup() {
-      document.getElementById("popup").classList.remove("d-flex");
-      document.getElementById("popup").classList.add("d-none");
+    document.getElementById('reporte').addEventListener('click', () => {
+      document.getElementById('popup-reporte').classList.remove('d-none');
+      document.getElementById('popup-reporte').classList.add('d-flex');
+    });
+
+    function cerrarPopup(tipo) {
+      if (tipo === 'reporte') {
+        document.getElementById('popup-reporte').classList.remove('d-flex');
+        document.getElementById('popup-reporte').classList.add('d-none');
+      } else if (tipo === 'reclamo') {
+        document.getElementById('popup-reclamo').classList.remove('d-flex');
+        document.getElementById('popup-reclamo').classList.add('d-none');
+      }
     }
   </script>
 </body>

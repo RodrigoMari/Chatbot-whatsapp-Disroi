@@ -4,12 +4,29 @@ const { PrismaClient } = require('@prisma/client');
 const fs = require('fs');
 const path = require('path');
 const prisma = new PrismaClient();
+const PDFDocument = require('pdfkit');
 
 function serializeBigInt(obj) {
   return JSON.parse(JSON.stringify(obj, (key, value) =>
     typeof value === 'bigint' ? value.toString() : value
   ));
 }
+
+function calcularHorasHabiles(fechaInicio, fechaFin) {
+    let totalHoras = 0;
+    let fecha = new Date(fechaInicio);
+
+    while (fecha < fechaFin) {
+        const dia = fecha.getDay();
+        if (dia !== 0 && dia !== 6) {
+            totalHoras += 1;
+        }
+        fecha.setHours(fecha.getHours() + 1);
+    }
+
+    return totalHoras;
+}
+
 
 router.get('/', async (req, res) => {
   const estado = req.query.estado;
@@ -56,10 +73,12 @@ router.get('/', async (req, res) => {
     const diffMs = now - reclamoFecha;
     const diffHoras = diffMs / (1000 * 60 * 60);
 
+    const horasHabiles = calcularHorasHabiles(reclamoFecha, now);
+
     let filaClase = '';
-    if (diffHoras > 72 && r.estado !== 'COMPLETADO') filaClase = 'bg-red text-white';
-    else if (diffHoras > 48 && r.estado !== 'COMPLETADO') filaClase = 'bg-orange';
-    else if (diffHoras > 24 && r.estado !== 'COMPLETADO') filaClase = 'bg-yellow';
+    if (horasHabiles > 72 && r.estado !== 'COMPLETADO') filaClase = 'bg-red text-white';
+    else if (horasHabiles > 48 && r.estado !== 'COMPLETADO') filaClase = 'bg-orange';
+    else if (horasHabiles > 24 && r.estado !== 'COMPLETADO') filaClase = 'bg-yellow';
 
     const rSerialized = serializeBigInt(r);
     return {
@@ -195,5 +214,84 @@ router.post('/pendiente/:id', async (req, res) => {
 
   res.redirect('/reclamos');
 });
+
+router.get('/reporte', async (req, res) => {
+  const { fecha_desde, fecha_hasta } = req.query;
+
+  // Traemos reclamos con sus áreas
+  const reclamos = await prisma.reclamo.findMany({
+    where: {
+      fecha_tiempo: {
+        gte: new Date(fecha_desde),
+        lte: new Date(fecha_hasta),
+      }
+    },
+    include: {
+      reclamo_area: true
+    }
+  });
+
+  const doc = new PDFDocument({ margin: 50 });
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'attachment; filename="reporte.pdf"');
+  doc.pipe(res);
+
+  // Título
+  doc.fontSize(20).text('Reporte de Reclamos', { align: 'center', underline: true });
+  doc.moveDown();
+  doc.fontSize(12).text(`Fecha desde: ${fecha_desde}    Fecha hasta: ${fecha_hasta}`, { align: 'center' });
+  doc.moveDown(2);
+
+  // Agrupar por área y estado
+  const areas = {};
+  const reclamosContados = new Set();
+
+  reclamos.forEach(r => {
+    reclamosContados.add(r.id);
+
+    r.reclamo_area.forEach(ra => {
+      const areaNombre = ra.area || 'Sin área';
+      if (!areas[areaNombre]) areas[areaNombre] = { total: 0, estados: {}, personas: {} };
+
+      areas[areaNombre].total++;
+      areas[areaNombre].estados[r.estado] = (areas[areaNombre].estados[r.estado] || 0) + 1;
+
+      // Si el reclamo está COMPLETADO, contar por persona
+      if (r.estado === 'COMPLETADO') {
+        const persona = r.tomado_por || 'Sin asignar';
+        if (!areas[areaNombre].personas[persona]) areas[areaNombre].personas[persona] = 0;
+        areas[areaNombre].personas[persona]++;
+      }
+    });
+  });
+
+  const totalReclamos = reclamosContados.size;
+
+  for (const [area, data] of Object.entries(areas)) {
+    doc.rect(doc.x - 10, doc.y, 500, 20).fill('#f0f0f0');
+    doc.fillColor('black').fontSize(14).text(`Área: ${area}`, { continued: true });
+    doc.fontSize(12).text(` Total: ${data.total} (${((data.total / totalReclamos) * 100).toFixed(2)}% del total)`);
+    doc.moveDown(0.5);
+
+    for (const [estado, cant] of Object.entries(data.estados)) {
+      doc.fillColor('blue').fontSize(12).text(` - Estado ${estado}: ${cant}`);
+
+      if (estado === 'COMPLETADO') {
+        for (const [persona, cantidad] of Object.entries(data.personas)) {
+          doc.fillColor('#555555').fontSize(11).text(`    - ${persona}: ${cantidad}`);
+        }
+      }
+    }
+
+    doc.moveDown();
+  }
+
+
+  doc.end();
+});
+
+
+
+
 
 module.exports = router;

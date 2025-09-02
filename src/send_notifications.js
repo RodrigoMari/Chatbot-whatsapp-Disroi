@@ -46,6 +46,22 @@ async function enviarNotificacion(areas, mensaje = "Reclamo en estado pendiente"
     }
 }
 
+function horasHabiles(fechaInicio, fechaFin) {
+    let totalHoras = 0;
+    let fecha = new Date(fechaInicio);
+
+    while (fecha < fechaFin) {
+        const dia = fecha.getDay();
+        if (dia !== 0 && dia !== 6) {
+            totalHoras += 1;
+        }
+        fecha.setHours(fecha.getHours() + 1);
+    }
+
+    return totalHoras;
+}
+
+
 async function enviarNotificacionesVencidas() {
   const ahoraUTC = new Date();
   const hace24hUTC = new Date(ahoraUTC.getTime() - 24 * 60 * 60 * 1000);
@@ -55,7 +71,7 @@ async function enviarNotificacionesVencidas() {
   try {
     // Traemos todos los reclamos pendientes
     const reclamos = await prisma.reclamo.findMany({
-      where: { estado: "PENDIENTE", fecha_tiempo: { lt: hace24hUTC } }, // mayor a 24h
+      where: { estado: "PENDIENTE", fecha_tiempo: { lt: hace24hUTC } },
       select: { id: true, fecha_tiempo: true }
     });
 
@@ -66,7 +82,6 @@ async function enviarNotificacionesVencidas() {
       select: { reclamo_Id: true, area: true }
     });
 
-    // Estructura: { AREA: { "24": X, "48": Y, "72": Z } }
     const porArea = {};
     const mapReclamos = {};
 
@@ -75,15 +90,14 @@ async function enviarNotificacionesVencidas() {
       const reclamo = reclamos.find(r => r.id === a.reclamo_Id);
       if (!reclamo) return;
 
-      const diffHoras =
-        (ahoraUTC.getTime() - reclamo.fecha_tiempo.getTime()) / (1000 * 60 * 60);
+    const diffHorasHabiles = horasHabiles(reclamo.fecha_tiempo, ahoraUTC);
 
       let rango = null;
-      if (diffHoras >= 72) {
+      if (diffHorasHabiles >= 72) {
         rango = "72";
-      } else if (diffHoras >= 48) {
+      } else if (diffHorasHabiles >= 48) {
         rango = "48";
-      } else if (diffHoras >= 24) {
+      } else if (diffHorasHabiles >= 24) {
         rango = "24";
       }
 
@@ -106,7 +120,7 @@ async function enviarNotificacionesVencidas() {
       - ${rangos["48"]} reclamos pendientes de más de 48h
       - ${rangos["72"]} reclamos pendientes de más de 72h`;
 
-      //console.log("→ Enviando notificación:", mensaje);
+      console.log("→ Enviando notificación:", mensaje);
       await enviarNotificacion([area], mensaje);
     }
   } catch (error) {
