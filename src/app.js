@@ -460,15 +460,16 @@ app.post('/webhook', async (req, res) => {
                     if (cliente) {
                         let vendedor1 = await prisma.vendedor.findFirst({where: { codigo: cliente.vendedor_1 }});
                         let vendedor2 = await prisma.vendedor.findFirst({where: { codigo: cliente.vendedor_2 }});
-                        if(vendedor1?.telefono)
+                        if(vendedor1?.telefono && vendedor1?.nombre){
                             mensaje += "Debido a la alta demanda, le pedimos que se comunique con sus vendedores designados:\n\n";
                             mensaje += `${vendedor1.nombre}: ${vendedor1.telefono}\n\n`;
                             if(vendedor2?.telefono != null)
                                 mensaje += `${vendedor2.nombre}: ${vendedor2.telefono}\n\n`;
-                        
                         mensaje += "Si de igual manera quiere comunicarse con un superior, escriba alguna observación que nos pueda dar contexto de la situación.";
-                        
                         await twilio.sendMessage(waId, mensaje);
+                        } else {
+                            await twilio.sendMessage(waId, "⬇️ Estoy aquí para ayudarte, por favor, especifique su consulta para registrar el reclamo. Su caso sera atendido por un responsable");
+                        }
                     }
                 });
 
@@ -497,10 +498,28 @@ app.post('/webhook', async (req, res) => {
                 twilio.sendMessage(waId, "Para llevar a cabo su pedido por *Tokin*, visite la tienda oficial de *Disroi*: https://www.tokintienda.com/");
                 break;
             case 'Manual':
-                twilio.sendMessage(waId, "Para llevar a cabo su pedido de manera *Manual* puede comunicarse con su vendedor designado. ¿Requiere su contacto?");
+                let mensaje = "";
+                prisma.maestro_cliente.findFirst({where: { codigo: estados[waId].cliente_id }
+                }).then(async cliente => {
+                    if (cliente) {
+                        let vendedor1 = await prisma.vendedor.findFirst({where: { codigo: cliente.vendedor_1 }});
+                        let vendedor2 = await prisma.vendedor.findFirst({where: { codigo: cliente.vendedor_2 }});
+                        if(vendedor1?.telefono && vendedor1?.nombre){
+                            mensaje += "Le pedimos que para concretar su pedido de manera manual se comunique con alguno de sus vendedores desginados:\n\n";
+                            mensaje += `${vendedor1.nombre}: ${vendedor1.telefono}\n\n`;
+                            if(vendedor2?.telefono != null)
+                                mensaje += `${vendedor2.nombre}: ${vendedor2.telefono}\n\n`;
+                        await twilio.sendMessage(waId, mensaje);
+                        } else {
+                            await twilio.sendMessage(waId, "No tiene vendedores designados, le recomiendo que haga su pedido por nuestra tienda oficial de *Disroi*: https://www.tokintienda.com/");
+                        }
+                    }
+                });
+
                 break;
             case 'Ver ofertas':
-                //Mostrar ofertas
+                await twilio.sendMessage(waId, "Actualmente *Disroi* no tiene ofertas disponibles para ofrecerte, sepa disculparnos");
+                twilio.sendListPicker(waId, main);
                 break;
         }
         //volver al menu principal

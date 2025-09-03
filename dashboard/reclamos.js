@@ -174,13 +174,22 @@ router.post('/resolver/:id', async (req, res) => {
   const id = parseInt(req.params.id);
   const { endpoint } = req.body;
 
-  await prisma.$executeRaw`
+  /*await prisma.$executeRaw`
     UPDATE reclamo
     SET estado = 'COMPLETADO',
         tomado_por = (SELECT nombre FROM suscripciones WHERE endpoint = ${endpoint} LIMIT 1),
         fecha_tomado = NOW()
     WHERE id = ${id};
-  `;
+  `;*/
+
+  await prisma.reclamo.update({
+    where: { id },
+    data: {
+      estado: 'COMPLETADO',
+      tomado_por: (await prisma.suscripciones.findFirst({ where: { endpoint } })).nombre,
+      fecha_tomado: new Date()
+    }
+  });
 
   res.redirect('/reclamos');
 });
@@ -189,13 +198,14 @@ router.post('/en_proceso/:id', async (req, res) => {
   const id = parseInt(req.params.id);
   const { endpoint } = req.body;
 
-  await prisma.$executeRaw`
-    UPDATE reclamo
-    SET estado = 'EN_PROCESO',
-        tomado_por = (SELECT nombre FROM suscripciones WHERE endpoint = ${endpoint} LIMIT 1),
-        fecha_tomado = NOW()
-    WHERE id = ${id};
-  `;
+    await prisma.reclamo.update({
+      where: { id },
+      data: {
+        estado: 'EN_PROCESO',
+        tomado_por: (await prisma.suscripciones.findFirst({ where: { endpoint } })).nombre,
+        fecha_tomado: new Date()
+      }
+    });
 
   res.redirect('/reclamos');
 });
@@ -204,13 +214,14 @@ router.post('/pendiente/:id', async (req, res) => {
   const id = parseInt(req.params.id);
   const { endpoint } = req.body;
 
-  await prisma.$executeRaw`
-    UPDATE reclamo
-    SET estado = 'PENDIENTE',
-        tomado_por = NULL,
-        fecha_tomado = NULL
-    WHERE id = ${id};
-  `;
+  await prisma.reclamo.update({
+      where: { id },
+      data: {
+        estado: 'PENDIENTE',
+        tomado_por: null,
+        fecha_tomado: null
+      }
+    });
 
   res.redirect('/reclamos');
 });
