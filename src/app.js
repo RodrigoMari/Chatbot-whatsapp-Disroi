@@ -5,6 +5,8 @@ const https = require('https');
 const fs = require('fs');
 const cron = require("node-cron");
 const { enviarNotificacionesVencidas, enviarNotificacion } = require("./send_notifications.js");
+const { Server } = require("socket.io");
+
 
 const prisma = new PrismaClient();
 const estados = {};
@@ -50,7 +52,7 @@ const blockNgrokAccess = (req, res, next) => {
 const path = require('path');
 
 const soynosoyuser = "HX9e184160bf10f041ed5747ae4db5d422"
-const nosoycliente = "HXa9f819aaf4ccf4bed51bbf64d009911e"
+const nosoycliente = "HXf7ce18d882ee63a3c0e46552b2bf1e12"
 
 const main = "HX6870b1d969384339885c8fa36ad104b0"
 
@@ -60,6 +62,10 @@ const sobreNosotros = "HXfc73d64a5f842aded7fac0af5d082fff"
 
 const noLlegó = "HX0cba42d4b6fdc98e57f029ad7df3b574";
 
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
@@ -218,13 +224,13 @@ app.post('/webhook', async (req, res) => {
     if(estados[waId].paso === 'esperando_nombre') {
         estados[waId].nombre = body;
         estados[waId].registro = "nombre";
-        estados[waId].paso = 'registrarusuario';
+        estados[waId].paso = 'registrarcomercio';
     }
 
     if(estados[waId].paso === 'esperando_direccion') {
         estados[waId].direccion = body;
         estados[waId].registro = "direccion";
-        estados[waId].paso = 'registrarusuario';
+        estados[waId].paso = 'registrarcomercio';
     }
 
     if(estados[waId].paso === 'esperando_telefono') {
@@ -249,8 +255,8 @@ app.post('/webhook', async (req, res) => {
     if(estados[waId].paso === 'nosoycliente') {
         if (req.body.ButtonText !== 'No soy cliente | CV') {
             switch(body) {
-                case 'Registrar usuario':
-                    estados[waId] = { paso: 'registrarusuario' };
+                case 'Registrar comercio':
+                    estados[waId] = { paso: 'registrarcomercio' };
                     break;
                 case 'Entregar curriculum':
                     estados[waId] = { paso: 'curriculum' };
@@ -280,8 +286,8 @@ app.post('/webhook', async (req, res) => {
         };
     }
 
-    if(estados[waId].paso === 'registrarusuario') {
-        console.log("Nuevo usuario:", req.body);
+    if(estados[waId].paso === 'registrarcomercio') {
+        console.log("Nuevo comercio:", req.body);
         if (!estados[waId].registro) {
             estados[waId].registro = "";
         }
@@ -616,8 +622,17 @@ const options = {
   cert: fs.readFileSync(path.join(__dirname, "../cert.pem"))
 };
 
-https.createServer(options, app).listen(3443, () => {
-  console.log('Servidor HTTPS activo en puerto 3443');
+
+const httpsServer = https.createServer(options, app);
+const io = new Server(httpsServer, {
+  cors: {
+    origin: "*",
+  }
+});
+
+
+httpsServer.listen(3443, () => {
+  console.log("Servidor HTTPS activo en puerto 3443");
 });
 
 app.listen(3000, () => {

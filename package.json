@@ -5,6 +5,7 @@
     "express": "^5.1.0",
     "node-cron": "^4.2.1",
     "pdfkit": "^0.17.2",
+    "socket.io": "^4.8.1",
     "twilio": "^5.7.1",
     "web-push": "^3.6.7"
   },

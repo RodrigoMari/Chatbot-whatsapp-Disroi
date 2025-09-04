@@ -8,7 +8,7 @@ async function sendMessage(sender, message) {
   try {
     const result = await client.messages.create({
       body: message,
-      from: "whatsapp:+15638938460",
+      from: "whatsapp:+14155238886",
       to: "whatsapp:+" + sender,
     });
     return result;
@@ -21,7 +21,7 @@ async function sendListPicker(to, template, variables) {
   try {
     const msg = await client.messages.create({
       to: 'whatsapp:+' + to,
-      from: 'whatsapp:+15638938460',
+      from: 'whatsapp:+14155238886',
       contentSid: template,
       contentVariables: JSON.stringify(variables),
     });

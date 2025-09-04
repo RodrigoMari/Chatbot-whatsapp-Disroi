@@ -191,6 +191,8 @@ router.post('/resolver/:id', async (req, res) => {
     }
   });
 
+  await req.io.emit("estadoActualizado", { id, nuevoEstado: "COMPLETADO" });
+
   res.redirect('/reclamos');
 });
 
@@ -207,12 +209,13 @@ router.post('/en_proceso/:id', async (req, res) => {
       }
     });
 
+    await req.io.emit("estadoActualizado", { id, nuevoEstado: "EN_PROCESO" });
+
   res.redirect('/reclamos');
 });
 
 router.post('/pendiente/:id', async (req, res) => {
   const id = parseInt(req.params.id);
-  const { endpoint } = req.body;
 
   await prisma.reclamo.update({
       where: { id },

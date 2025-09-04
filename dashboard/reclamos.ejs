@@ -334,5 +334,15 @@
       }
     }
   </script>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    socket.on("estadoActualizado", (data) => {
+
+      location.reload();
+    });
+  </script>
 </body>
 </html>
