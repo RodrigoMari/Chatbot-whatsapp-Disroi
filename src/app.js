@@ -412,7 +412,7 @@ app.post('/webhook', async (req, res) => {
                     ...estados[waId],
                     paso: 'factura',
                     tipo: ListTitle,
-                    area: ['DEPOSITO'],
+                    area: ['DEPOSITO', 'GC'],
                 };
 
                 break;
@@ -424,7 +424,7 @@ app.post('/webhook', async (req, res) => {
                     ...estados[waId],
                     paso: 'factura',
                     tipo: ListTitle,
-                    area: ['DEPOSITO'],
+                    area: ['DEPOSITO', 'GC'],
                 };
                 break;
             case 'Mi vendedor no me visitó':
@@ -434,7 +434,7 @@ app.post('/webhook', async (req, res) => {
                     ...estados[waId],
                     paso: 'guardar',
                     tipo: ListTitle,
-                    area: ['VENTAS'],
+                    area: ['VENTAS', 'GC'],
                 };
 
                 break;
@@ -446,7 +446,7 @@ app.post('/webhook', async (req, res) => {
                     ...estados[waId],
                     paso: 'factura',
                     tipo: ListTitle,
-                    area: ['ADMINISTRACION'],
+                    area: ['ADMINISTRACION', 'GC'],
                 };
                 break;
             case 'Solicitud NDC':
@@ -456,7 +456,7 @@ app.post('/webhook', async (req, res) => {
                     ...estados[waId],
                     paso: 'factura',
                     tipo: ListTitle,
-                    area: ['ADMINISTRACION', 'VENTAS'],
+                    area: ['ADMINISTRACION', 'VENTAS', 'GC'],
                 };
                 break;
             case 'Requiero atención':
@@ -483,7 +483,7 @@ app.post('/webhook', async (req, res) => {
                     ...estados[waId],
                     paso: 'guardar',
                     tipo: ListTitle,
-                    area: ['VENTAS'],
+                    area: ['VENTAS', 'GC'],
                 };
 
                 break;
@@ -494,7 +494,7 @@ app.post('/webhook', async (req, res) => {
                     ...estados[waId],
                     paso: 'guardar',
                     tipo: ListTitle,
-                    area: ['VENTAS', 'ADMINISTRACION', 'DEPOSITO'],
+                    area: ['VENTAS', 'ADMINISTRACION', 'DEPOSITO', 'GC'],
                 };
                 break;
         }
