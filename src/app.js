@@ -13,11 +13,11 @@ const estados = {};
 const app = express();
 
 const allowedIPs = [
-    '179.60.217.196',  // Yo ip local
-    '181.92.200.67',  // admin Fran
-    '186.182.43.30',  // admin Rodri
-    '186.182.43.30',  // RRHH Vir
-    //'192.168.110.179',  // depo Cesar
+    '179.60.217.196',
+    '181.92.200.67',
+    '186.182.43.30',
+    '186.182.43.30',
+    '181.92.200.11',
 ];
 
 app.set('trust proxy', true);
