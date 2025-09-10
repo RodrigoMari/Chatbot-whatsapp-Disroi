@@ -8,18 +8,19 @@ datasource db {
 }
 
 model reclamo {
-  id           BigInt           @id @default(autoincrement())
-  fecha_tiempo DateTime         @default(now())
-  cliente      String?          @db.VarChar(10)
-  tipo         String?          @default("")
-  cod_factura  Int?
-  estado       reclamo_estado?  @default(PENDIENTE)
-  tomado_por   String?          @db.VarChar(30)
-  fecha_tomado DateTime?        @db.DateTime(0)
-  archivoPdf   String?          @db.VarChar(255)
-  observacion  String?          @db.VarChar(300)
-  maestro_21   maestro_cliente? @relation(fields: [cliente], references: [codigo], onDelete: Restrict, onUpdate: Restrict, map: "fk_cliente_codigo")
-  reclamo_area reclamo_area[]
+  id              BigInt           @id @default(autoincrement())
+  fecha_tiempo    DateTime         @default(now())
+  cliente         String?          @db.VarChar(10)
+  tipo            String?          @default("")
+  cod_factura     Int?
+  estado          reclamo_estado?  @default(PENDIENTE)
+  tomado_por      String?          @db.VarChar(30)
+  fecha_tomado    DateTime?        @db.DateTime(0)
+  archivoPdf      String?          @db.VarChar(255)
+  observacion     String?          @db.VarChar(300)
+  info_resolucion String?          @db.LongText
+  maestro_21      maestro_cliente? @relation(fields: [cliente], references: [codigo], onDelete: Restrict, onUpdate: Restrict, map: "fk_cliente_codigo")
+  reclamo_area    reclamo_area[]
 
   @@index([cliente], map: "fk_cliente_codigo")
 }

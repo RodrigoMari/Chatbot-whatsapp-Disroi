@@ -151,6 +151,7 @@
           <option value="VENTAS" <%= areaSeleccionada === 'VENTAS' ? 'selected' : '' %>>VENTAS</option>
           <option value="DEPOSITO" <%= areaSeleccionada === 'DEPOSITO' ? 'selected' : '' %>>DEPOSITO</option>
           <option value="ADMINISTRACION" <%= areaSeleccionada === 'ADMINISTRACION' ? 'selected' : '' %>>ADMINISTRACION</option>
+          <option value="RRHH" <%= areaSeleccionada === 'RRHH' ? 'selected' : '' %>>RRHH</option>
         </select>
       </form>
 
@@ -246,7 +247,11 @@
             <p class="mb-1"><strong>Fecha Toma:</strong> <span id="popup-fecha-toma"></span></p>
             <p class="mb-1"><strong>Tomado por:</strong> <span id="popup-usuario-toma"></span></p>
           </div>
+          <button type="button" class="btn btn-info w-100 mb-2" id="btn-info-resolucion">
+            Revisar resolución
+          </button>
         </div>
+
         <p><strong>Fecha:</strong> <span id="popup-fecha"></span></p>
         <p><strong>ID:</strong> <span id="popup-id"></span></p>
         <p><strong>Cliente:</strong> <span id="popup-cliente"></span></p>
@@ -277,9 +282,30 @@
         </div>
       </div>
     </div>
+
+    <div id="popup-info-resolucion" class="popup-overlay d-none">
+      <div class="popup-content">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <h5>📋 Información de Resolución</h5>
+        </div>
+        
+        <div class="d-flex gap-2">
+          <form id="guardar-informacion-resolucion" method="POST">
+            <button type="submit" class="btn btn-success w-100">Guardar información</button>
+          </form>
+          <button type="button" onclick="cerrarPopup('info-resolucion')" class="btn btn-secondary">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   </div>
   <script>
     async function mostrarPopup(r) {
+
+      document.getElementById("btn-info-resolucion").onclick = function() {
+        mostrarPopupInfoResolucion(r);
+      };
 
       document.getElementById("popup-fecha-toma").textContent = r.fecha_tomado ? r.fecha_tomado.replace("T", " ").split(".")[0] : "no tomado";
       document.getElementById("popup-usuario-toma").textContent = r.tomado_por || "no tomado";
@@ -325,6 +351,18 @@
       document.getElementById('popup-reporte').classList.add('d-flex');
     });
 
+    document.getElementById('btn-agregar-paso').addEventListener('click', () => {
+      document.getElementById('div-pasos').classList.toggle('d-none');
+      document.getElementById("popup-info-resolucion").action = "/reclamos/info-resolucion/" + r.id;
+    });
+
+    async function mostrarPopupInfoResolucion(r) {
+      document.getElementById("popup-info-resolucion").classList.remove("d-none");
+      document.getElementById("popup-info-resolucion").classList.add("d-flex");
+
+      document.getElementById("guardar-informacion-resolucion").action = "/reclamos/info-resolucion/" + r.id;
+    }
+
     function cerrarPopup(tipo) {
       if (tipo === 'reporte') {
         document.getElementById('popup-reporte').classList.remove('d-flex');
@@ -332,6 +370,9 @@
       } else if (tipo === 'reclamo') {
         document.getElementById('popup-reclamo').classList.remove('d-flex');
         document.getElementById('popup-reclamo').classList.add('d-none');
+      } else if (tipo === 'info-resolucion') {
+        document.getElementById('popup-info-resolucion').classList.remove('d-flex');
+        document.getElementById('popup-info-resolucion').classList.add('d-none');
       }
     }
   </script>

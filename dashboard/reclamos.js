@@ -110,15 +110,12 @@ router.get('/:id/pdf', async (req, res) => {
       return res.status(404).send('PDF no encontrado');
     }
 
-    // Build the full file path
     const filePath = path.join(__dirname, '..', reclamo.archivoPdf);
     
-    // Check if file exists
     if (!fs.existsSync(filePath)) {
       return res.status(404).send('Archivo PDF no encontrado en el servidor');
     }
 
-    // Read the file and send it
     const fileBuffer = fs.readFileSync(filePath);
     
     res.setHeader('Content-Type', 'application/pdf');
@@ -131,7 +128,6 @@ router.get('/:id/pdf', async (req, res) => {
   }
 });
 
-// Alternative approach using streams (more memory efficient for large files)
 router.get('/:id/pdf-stream', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -151,11 +147,9 @@ router.get('/:id/pdf-stream', async (req, res) => {
       return res.status(404).send('Archivo PDF no encontrado en el servidor');
     }
 
-    // Set headers
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="reclamo-${id}.pdf"`);
-    
-    // Create read stream and pipe to response
+
     const fileStream = fs.createReadStream(filePath);
     fileStream.pipe(res);
     
@@ -173,14 +167,6 @@ router.get('/:id/pdf-stream', async (req, res) => {
 router.post('/resolver/:id', async (req, res) => {
   const id = parseInt(req.params.id);
   const { endpoint } = req.body;
-
-  /*await prisma.$executeRaw`
-    UPDATE reclamo
-    SET estado = 'COMPLETADO',
-        tomado_por = (SELECT nombre FROM suscripciones WHERE endpoint = ${endpoint} LIMIT 1),
-        fecha_tomado = NOW()
-    WHERE id = ${id};
-  `;*/
 
   await prisma.reclamo.update({
     where: { id },
@@ -223,6 +209,19 @@ router.post('/pendiente/:id', async (req, res) => {
         estado: 'PENDIENTE',
         tomado_por: null,
         fecha_tomado: null
+      }
+    });
+
+  res.redirect('/reclamos');
+});
+
+router.post('/info-resolucion/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+
+  await prisma.reclamo.update({
+      where: { id },
+      data: {
+        info_resolucion: req.body.info_resolucion || null
       }
     });
 
