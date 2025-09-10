@@ -291,6 +291,7 @@
         
         <div class="d-flex gap-2">
           <form id="guardar-informacion-resolucion" method="POST">
+            <textarea id="info-resolucion-text" class="form-control" placeholder="Escribí la información de resolución aquí..."></textarea>
             <button type="submit" class="btn btn-success w-100">Guardar información</button>
           </form>
           <button type="button" onclick="cerrarPopup('info-resolucion')" class="btn btn-secondary">Cerrar</button>
@@ -359,6 +360,9 @@
     async function mostrarPopupInfoResolucion(r) {
       document.getElementById("popup-info-resolucion").classList.remove("d-none");
       document.getElementById("popup-info-resolucion").classList.add("d-flex");
+
+      const textarea = document.getElementById("info-resolucion-text");
+      textarea.value = r.info_resolucion || "";
 
       document.getElementById("guardar-informacion-resolucion").action = "/reclamos/info-resolucion/" + r.id;
     }

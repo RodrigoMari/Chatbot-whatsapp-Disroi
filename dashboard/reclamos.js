@@ -217,13 +217,12 @@ router.post('/pendiente/:id', async (req, res) => {
 
 router.post('/info-resolucion/:id', async (req, res) => {
   const id = parseInt(req.params.id);
+  const { info_resolucion } = req.body;
 
   await prisma.reclamo.update({
-      where: { id },
-      data: {
-        info_resolucion: req.body.info_resolucion || null
-      }
-    });
+    where: { id },
+    data: { info_resolucion }
+  });
 
   res.redirect('/reclamos');
 });
