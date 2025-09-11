@@ -241,13 +241,12 @@
     <!-- Popup -->
     <div id="popup-reclamo" class="popup-overlay d-none">
       <div class="popup-content">
-        <h5 class="mb-4">Detalles del Reclamo</h5>
-        <div class="mb-2">
-          <p class="mb-1"><strong>Fecha Toma:</strong> <span id="popup-fecha-toma"></span></p>
-          <p class="mb-3"><strong>Tomado por:</strong> <span id="popup-usuario-toma"></span></p>
-          <button type="button" class="btn btn-info w-100 mb-3" id="btn-info-resolucion">
-            Revisar resolución
-          </button>
+        <div class="d-flex justify-content-between align-items-start">
+          <h5 class="mb-4">Detalles del Reclamo</h5>
+          <div class="text-end">
+            <p class="mb-1"><strong>Fecha Toma:</strong> <span id="popup-fecha-toma"></span></p>
+            <p class="mb-1"><strong>Tomado por:</strong> <span id="popup-usuario-toma"></span></p>
+          </div>
         </div>
 
         <p><strong>Fecha:</strong> <span id="popup-fecha"></span></p>
@@ -276,27 +275,34 @@
             <input type="hidden" name="endpoint" id="endpoint-completado">
             <button type="submit" class="btn btn-success w-100">✅ Completado</button>
           </form>
+
+          <button type="button" class="btn btn-info w-100" id="btn-info-resolucion">
+            Revisar resolución
+          </button>
+
           <button type="button" onclick="cerrarPopup('reclamo')" class="btn btn-secondary w-100">❌ Cancelar</button>
         </div>
       </div>
     </div>
 
-    <div id="popup-info-resolucion" class="popup-overlay d-none">
-      <div class="popup-content">
-        <div class="d-flex justify-content-between align-items-start mb-3">
-          <h5>📋 Información de Resolución</h5>
-        </div>
-        
-        <div class="d-flex gap-2">
-          <form id="guardar-informacion-resolucion" method="POST">
-            <textarea id="info-resolucion-text" name="info_resolucion" class="form-control" placeholder="Escribí la información de resolución aquí..."></textarea>
-            <button type="submit" class="btn btn-success w-100">Guardar información</button>
-          </form>
-          <button type="button" onclick="cerrarPopup('info-resolucion')" class="btn btn-secondary">Cerrar</button>
-        </div>
-      </div>
+<div id="popup-info-resolucion" class="popup-overlay d-none">
+  <div class="popup-content">
+    <div class="mb-3">
+      <h5>📋 Información de Resolución</h5>
     </div>
+
+    <form id="guardar-informacion-resolucion" method="POST" class="d-flex flex-column gap-3">
+      <!-- Textarea más grande -->
+      <textarea id="info-resolucion-text" name="info_resolucion" class="form-control" rows="6" placeholder="Escribí la información de resolución aquí..."></textarea>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-success flex-fill">💾 Guardar información</button>
+        <button type="button" onclick="cerrarPopup('info-resolucion')" class="btn btn-secondary flex-fill">❌ Cerrar</button>
+      </div>
+    </form>
   </div>
+</div>
+
 
   </div>
   <script>
