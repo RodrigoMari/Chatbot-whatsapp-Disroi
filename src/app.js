@@ -1,7 +1,7 @@
 const express = require('express');
 const twilio = require('./twilio.js');
 const { PrismaClient } = require('@prisma/client');
-const https = require('https');
+const http = require("http");
 const fs = require('fs');
 const cron = require("node-cron");
 const { enviarNotificacionesVencidas, enviarNotificacion } = require("./send_notifications.js");
@@ -34,19 +34,6 @@ const checkIPWhitelist = (req, res, next) => {
     }
     
     return res.status(403).send('Acceso denegado - IP no autorizada');
-};
-
-//bloquear conexion de ngrok
-const blockNgrokAccess = (req, res, next) => {
-    //const host = req.get('host');
-    
-    // Si viene de ngrok, bloquear
-//    if (host && host.includes('ngrok')) {
-//        return res.status(403).send('Acceso denegado - Use la conexión local');
-//    }
-    
-    // Si viene de localhost o IP local, permitir
-    next();
 };
 
 const path = require('path');
@@ -540,10 +527,10 @@ app.post('/webhook', async (req, res) => {
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../dashboard'));
-app.use(express.static(path.join(__dirname, '../dashboard')), blockNgrokAccess, checkIPWhitelist);
+app.use(express.static(path.join(__dirname, '../dashboard')), checkIPWhitelist);
 app.use(express.static(path.join(__dirname, '../public')));
 const reclamosRouter = require('../dashboard/reclamos.js');
-app.use('/reclamos', blockNgrokAccess, checkIPWhitelist, reclamosRouter);
+app.use('/reclamos', checkIPWhitelist, reclamosRouter);
 
 
 async function saveSubscription(sub) {
@@ -581,11 +568,11 @@ app.get('/check-subscription', async (req, res) => {
   }
 });
 
-app.get('/vapidPublicKey', blockNgrokAccess, checkIPWhitelist, (req, res) => {
+app.get('/vapidPublicKey', checkIPWhitelist, (req, res) => {
   res.send(process.env.VAPID_PUBLIC_KEY);
 });
 
-app.post('/subscribe', blockNgrokAccess, checkIPWhitelist, express.json(), async (req, res) => {
+app.post('/subscribe', checkIPWhitelist, express.json(), async (req, res) => {
   const { subscription, area, nombre } = req.body;
   const clientIP = req.ip?.replace(/^::ffff:/, '') || null;
 
@@ -625,9 +612,12 @@ module.exports = { enviarNotificacion };
 //  }
 //});
 
-const io = new Server(app, { cors: { origin: "*" } });
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: "*" }
+});
 
-app.listen(3443, () => {
+server.listen(3443, () => {
   console.log("Servidor HTTPS activo en puerto 3443");
 });
 
