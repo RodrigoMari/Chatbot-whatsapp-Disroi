@@ -617,21 +617,17 @@ app.post('/subscribe', blockNgrokAccess, checkIPWhitelist, express.json(), async
 
 module.exports = { enviarNotificacion };
 
-const options = {
-  key: fs.readFileSync(path.join(__dirname, "../key.pem")),
-  cert: fs.readFileSync(path.join(__dirname, "../cert.pem"))
-};
 
+//const httpsServer = https.createServer(options, app);
+//const io = new Server(httpsServer, {
+//  cors: {
+//    origin: "*",
+//  }
+//});
 
-const httpsServer = https.createServer(options, app);
-const io = new Server(httpsServer, {
-  cors: {
-    origin: "*",
-  }
-});
+const io = new Server(app, { cors: { origin: "*" } });
 
-
-httpsServer.listen(3443, () => {
+app.listen(3443, () => {
   console.log("Servidor HTTPS activo en puerto 3443");
 });
 
