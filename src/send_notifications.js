@@ -76,6 +76,11 @@ async function enviarNotificacionesVencidas() {
       select: { id: true, fecha_tiempo: true }
     });
 
+    if (reclamos.length === 0) {
+      console.log("→ No hay reclamos pendientes para notificar.");
+      return;
+    }
+
     const reclamoIds = reclamos.map(r => r.id);
 
     const areas = await prisma.reclamo_area.findMany({
