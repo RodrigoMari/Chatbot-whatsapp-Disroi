@@ -72,6 +72,8 @@ model paso {
   descripcion String    @db.VarChar(255)
   fecha       DateTime? @default(now()) @db.DateTime(0)
   reclamoId   BigInt
+  tipo        paso_tipo @default(ANALISIS)
+  persona     Int?
   reclamo     reclamo   @relation(fields: [reclamoId], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_paso_reclamo")
 
   @@index([reclamoId], map: "reclamoId")
@@ -82,4 +84,10 @@ enum reclamo_estado {
   EN_PROCESO
   COMPLETADO
   EMPTY_ENUM_VALUE @map("")
+}
+
+enum paso_tipo {
+  ANALISIS
+  INFORMACION
+  FINALIZACION
 }

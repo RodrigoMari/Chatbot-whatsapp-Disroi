@@ -96,6 +96,38 @@ router.get('/', async (req, res) => {
   });
 });
 
+// Mostrar reclamo + pasos
+router.get('/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const reclamo = await prisma.reclamo.findUnique({
+    where: { id },
+    include: { paso: true, maestro_21: true, reclamo_area: true }
+  });
+  if (!reclamo) return res.status(404).send("Reclamo no encontrado");
+
+  res.render("reclamo_detalle", { reclamo });
+});
+
+
+router.post('/:id/agregar-paso', async (req, res) => {
+  try {
+    const { tipo, descripcion, endpoint } = req.body;
+    await prisma.paso.create({
+      data: {
+        reclamoId: parseInt(req.params.id),
+        tipo: tipo,
+        descripcion: descripcion,
+        fecha: new Date(),
+        persona: (await prisma.suscripciones.findFirst({ where: { endpoint } })).nombre,
+      }
+    });
+    res.redirect(`/reclamos/${req.params.id}`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error al guardar paso');
+  }
+});
+
 // Descargar PDF de un reclamo
 router.get('/:id/pdf', async (req, res) => {
   try {

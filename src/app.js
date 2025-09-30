@@ -527,11 +527,11 @@ app.post('/webhook', async (req, res) => {
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../dashboard'));
-app.use(express.static(path.join(__dirname, '../dashboard')), checkIPWhitelist);
+app.use(express.static(path.join(__dirname, '../dashboard'))); //checkIPWhitelist
 app.use(express.static(path.join(__dirname, '../public')));
 const reclamosRouter = require('../dashboard/reclamos.js');
-app.use('/reclamos', checkIPWhitelist, reclamosRouter);
-
+app.use('/reclamos', reclamosRouter); //checkIPWhitelist
+app.use('/reclamo_detalle', reclamosRouter);
 
 async function saveSubscription(sub) {
   await prisma.suscripciones.create({

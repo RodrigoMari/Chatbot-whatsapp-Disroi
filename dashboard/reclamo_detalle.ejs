@@ -42,7 +42,7 @@
             <label for="descripcion" class="form-label fw-bold">Descripción</label>
             <textarea id="descripcion" name="descripcion" class="form-control" rows="4" placeholder="Escribe los detalles del paso..." required></textarea>
           </div>
-
+          <input type="hidden" name="endpoint" id="endpoint-nombre">
           <button type="submit" class="btn btn-success">💾 Guardar Paso</button>
         </form>
       </div>
@@ -54,13 +54,13 @@
         📜 Historial de Resolución
       </div>
       <div class="card-body">
-        <% if (reclamo.pasos && reclamo.pasos.length > 0) { %>
+        <% if (reclamo.paso && reclamo.paso.length > 0) { %>
           <ul class="list-group">
-            <% reclamo.pasos.forEach(function(p) { %>
+            <% reclamo.paso.forEach(function(p) { %>
               <li class="list-group-item">
                 <strong><%= p.tipo %>:</strong> <%= p.descripcion %>  
-                <br><small class="text-muted">Registrado el <%= new Date(p.fecha).toLocaleString('es-AR') %></small>
               </li>
+              <br><small class="text-muted">Registrado el <%= new Date(p.fecha).toLocaleString('es-AR') %> por <%= p.persona %> </small>
             <% }) %>
           </ul>
         <% } else { %>
@@ -74,5 +74,21 @@
       <a href="/reclamos" class="btn btn-outline-secondary">⬅️ Volver a la lista</a>
     </div>
   </div>
+
+  <script>
+    async function setEndpointInputs() {
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (!registration) return;
+
+      const subscription = await registration.pushManager.getSubscription();
+      if (!subscription) return;
+
+      const endpoint = subscription.endpoint;
+
+      document.getElementById("endpoint-nombre").value = endpoint;
+    }
+
+    await setEndpointInputs();
+  </script>
 </body>
 </html>

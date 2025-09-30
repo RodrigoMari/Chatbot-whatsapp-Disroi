@@ -113,7 +113,7 @@
   </script>
 
 
-  <div id="main-content" class="d-none">
+  <div id="main-content" class="d-flex">  <!-- d-none -->
     <div class="container my-5">
       <h1 class="text-center fw-bold mb-4">Gestión de Reclamos</h1>
       <button id="reporte" class="btn btn-primary mb-3">Generar Reporte</button>
@@ -189,6 +189,7 @@
               <th>Estado</th>
               <th>CV</th>
               <th>Acción</th>
+              <th>Acción</th>
             </tr>
           </thead>
           <tbody>
@@ -223,6 +224,11 @@
                   <% } else { %>
                     <span class="text-muted">Sin PDF</span>
                   <% } %>
+                </td>
+                <td>
+                  <form action="/reclamos/<%= r.id %>" method="GET">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm">Pasos resolución</button>
+                  </form>
                 </td>
                 <td>
                   <button type="button" class="btn btn-success btn-sm"
