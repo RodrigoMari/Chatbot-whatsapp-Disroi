@@ -43,7 +43,7 @@ const nosoycliente = "HXf7ce18d882ee63a3c0e46552b2bf1e12"
 
 const main = "HX6870b1d969384339885c8fa36ad104b0"
 
-const reclamo = "HX4f328453bfcfbdaaa70d5a4cb85527dd"
+const reclamo = "HXc094d32314dc5bd4015d8bbdb3cc3fc1"
 const pedido = "HX25d7f54ba8b3d54d947652ffac9b8703"
 const sobreNosotros = "HXfc73d64a5f842aded7fac0af5d082fff"
 
