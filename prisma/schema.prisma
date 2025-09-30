@@ -19,6 +19,7 @@ model reclamo {
   archivoPdf      String?          @db.VarChar(255)
   observacion     String?          @db.VarChar(300)
   info_resolucion String?          @db.LongText
+  paso            paso[]
   maestro_21      maestro_cliente? @relation(fields: [cliente], references: [codigo], onDelete: Restrict, onUpdate: Restrict, map: "fk_cliente_codigo")
   reclamo_area    reclamo_area[]
 
@@ -64,6 +65,16 @@ model vendedor {
   codigo   String  @unique(map: "codigo") @db.VarChar(2)
   nombre   String  @db.VarChar(50)
   telefono String? @db.VarChar(20)
+}
+
+model paso {
+  id          BigInt    @id @default(autoincrement())
+  descripcion String    @db.VarChar(255)
+  fecha       DateTime? @default(now()) @db.DateTime(0)
+  reclamoId   BigInt
+  reclamo     reclamo   @relation(fields: [reclamoId], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_paso_reclamo")
+
+  @@index([reclamoId], map: "reclamoId")
 }
 
 enum reclamo_estado {

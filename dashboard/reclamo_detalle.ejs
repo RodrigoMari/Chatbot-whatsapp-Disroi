@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Detalle de Reclamo</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="bg-light text-dark">
+  <div class="container my-5">
+    <h1 class="text-center fw-bold mb-4">Detalle del Reclamo #<%= reclamo.id %></h1>
+
+    <!-- Datos básicos del reclamo -->
+    <div class="card mb-4 shadow-sm">
+      <div class="card-body">
+        <p><strong>Cliente:</strong> <%= reclamo.maestro_21?.nombre || "sin nombre" %></p>
+        <p><strong>Teléfono:</strong> <%= reclamo.maestro_21?.telefono || "sin telefono" %></p>
+        <p><strong>Área:</strong> <%- reclamo.reclamo_area.map(a => a.area).join(', ') %></p>
+        <p><strong>Observación:</strong> <%= reclamo.observacion %></p>
+      </div>
+    </div>
+
+    <!-- Formulario para agregar paso -->
+    <div class="card mb-4 shadow-sm">
+      <div class="card-header bg-primary text-white">
+        ➕ Agregar paso de resolución
+      </div>
+      <div class="card-body">
+        <form method="POST" action="/reclamos/<%= reclamo.id %>/agregar-paso" class="d-flex flex-column gap-3">
+          <div>
+            <label for="tipo" class="form-label fw-bold">Tipo de paso</label>
+            <select id="tipo" name="tipo" class="form-select" required>
+              <option value="">Seleccionar...</option>
+              <option value="ANALISIS">🔍 Análisis</option>
+              <option value="INFORMACION">ℹ️ Información</option>
+              <option value="FINALIZACION">✅ Finalización</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="descripcion" class="form-label fw-bold">Descripción</label>
+            <textarea id="descripcion" name="descripcion" class="form-control" rows="4" placeholder="Escribe los detalles del paso..." required></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-success">💾 Guardar Paso</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Historial de pasos -->
+    <div class="card shadow-sm">
+      <div class="card-header bg-secondary text-white">
+        📜 Historial de Resolución
+      </div>
+      <div class="card-body">
+        <% if (reclamo.pasos && reclamo.pasos.length > 0) { %>
+          <ul class="list-group">
+            <% reclamo.pasos.forEach(function(p) { %>
+              <li class="list-group-item">
+                <strong><%= p.tipo %>:</strong> <%= p.descripcion %>  
+                <br><small class="text-muted">Registrado el <%= new Date(p.fecha).toLocaleString('es-AR') %></small>
+              </li>
+            <% }) %>
+          </ul>
+        <% } else { %>
+          <p class="text-muted">Todavía no hay pasos registrados.</p>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Botón volver -->
+    <div class="mt-4">
+      <a href="/reclamos" class="btn btn-outline-secondary">⬅️ Volver a la lista</a>
+    </div>
+  </div>
+</body>
+</html>
