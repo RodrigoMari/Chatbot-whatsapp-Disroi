@@ -5,6 +5,19 @@ const fs = require('fs');
 const path = require('path');
 const prisma = new PrismaClient();
 const PDFDocument = require('pdfkit');
+const multer = require('multer');
+
+const storage = multer.diskStorage({
+  destination: function(req, file, cb) {
+    cb(null, path.join(__dirname, '../uploads'));
+  },
+  filename: function(req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ storage: storage });
 
 function serializeBigInt(obj) {
   return JSON.parse(JSON.stringify(obj, (key, value) =>
@@ -109,16 +122,23 @@ router.get('/:id', async (req, res) => {
 });
 
 
-router.post('/:id/agregar-paso', async (req, res) => {
+router.post('/:id/agregar-paso', upload.single('foto'), async (req, res) => {
   try {
     const { tipo, descripcion, endpoint } = req.body;
+
+    let fotoPaths = [];
+    if (req.file) {
+      fotoPaths = ['/uploads/' + req.file.filename];
+    }
+
     await prisma.paso.create({
       data: {
         reclamoId: parseInt(req.params.id),
         tipo: tipo,
         descripcion: descripcion,
         fecha: new Date(),
-        persona: (await prisma.suscripciones.findFirst({ where: { endpoint } })).nombre,
+        //persona: (await prisma.suscripciones.findFirst({ where: { endpoint } })).nombre,
+        foto: fotoPaths.length > 0 ? fotoPaths.join(',') : null,
       }
     });
     res.redirect(`/reclamos/${req.params.id}`);
