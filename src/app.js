@@ -126,7 +126,7 @@ app.post('/webhook', async (req, res) => {
             datos.observacion = datos.observacion + "\nObservación: " + body;
         }
 
-        if(datos.tipo === 'Me falta un producto' || datos.tipo === 'Solicitud NDC') {
+        if(datos.tipo === 'Faltante/Rotura producto' || datos.tipo === 'Solicitud NDC') {
             datos.observacion = datos.observacion + "\nObservación: " + body;
         }
 
@@ -327,7 +327,7 @@ app.post('/webhook', async (req, res) => {
         }
 
         switch (estados[waId]?.tipo) {
-            case 'Me falta un producto':
+            case 'Faltante/Rotura producto':
                 twilio.sendMessage(waId, "Para terminar de registrar su reclamo le pido que nos comunique, en 1 solo mensaje, qué *productos* faltan.\n\n"
                     + "💡​ Por favor, mencione los códigos de producto especificados en la factura para que no haya confusión");
                 estados[waId] = {
@@ -403,7 +403,7 @@ app.post('/webhook', async (req, res) => {
                 };
 
                 break;
-            case 'Me falta un producto':
+            case 'Faltante/Rotura producto':
                 twilio.sendMessage(waId, "📜​ Para continuar, por favor, escribe el *codigo de factura* de *5 o 6 dígitos (sin ceros)* referido a esta diferencia\n\n"
                     + "💡​ Como dato, las facturas de *6 digitos* corresponden a *facturas tipo A* mientras que las de *5 digitos* a *facturas tipo B*");
 
