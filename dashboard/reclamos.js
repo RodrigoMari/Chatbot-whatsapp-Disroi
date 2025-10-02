@@ -40,6 +40,35 @@ function calcularHorasHabiles(fechaInicio, fechaFin) {
     return totalHoras;
 }
 
+async function marcarEnProceso(id, endpoint, io) {
+  const suscriptor = await prisma.suscripciones.findFirst({ where: { endpoint } });
+
+  await prisma.reclamo.update({
+    where: { id },
+    data: {
+      estado: 'EN_PROCESO',
+      tomado_por: suscriptor?.nombre,
+      fecha_tomado: new Date()
+    }
+  });
+  io.emit("estadoActualizado", { id, nuevoEstado: "EN_PROCESO" });
+}
+
+async function marcarCompletado(id, endpoint, io) {
+  const suscriptor = await prisma.suscripciones.findFirst({ where: { endpoint } });
+
+  await prisma.reclamo.update({
+    where: { id },
+    data: {
+      estado: 'COMPLETADO',
+      tomado_por: suscriptor?.nombre,
+      fecha_tomado: new Date()
+    }
+  });
+
+  io.emit("estadoActualizado", { id, nuevoEstado: "COMPLETADO" });
+}
+
 
 router.get('/', async (req, res) => {
   const estado = req.query.estado;
@@ -125,7 +154,6 @@ router.get('/:id', async (req, res) => {
 router.post('/:id/agregar-paso', upload.single('foto'), async (req, res) => {
   try {
     const { tipo, descripcion, endpoint } = req.body;
-
     let fotoPaths = [];
     if (req.file) {
       fotoPaths = ['/uploads/' + req.file.filename];
@@ -137,11 +165,16 @@ router.post('/:id/agregar-paso', upload.single('foto'), async (req, res) => {
         tipo: tipo,
         descripcion: descripcion,
         fecha: new Date(),
-        //persona: (await prisma.suscripciones.findFirst({ where: { endpoint } })).nombre,
+        persona: (await prisma.suscripciones.findFirst({ where: { endpoint } })).nombre,
         foto: fotoPaths.length > 0 ? fotoPaths.join(',') : null,
       }
     });
-    res.redirect(`/reclamos/${req.params.id}`);
+
+    if (tipo === "ANALISIS" || tipo === "INFORMACION") {
+      await marcarEnProceso(req.params.id, endpoint, req.io);
+    } else if (tipo === "FINALIZACION") {
+      await marcarCompletado(req.params.id, endpoint, req.io);
+    }
   } catch (err) {
     console.error(err);
     res.status(500).send('Error al guardar paso');
@@ -231,7 +264,7 @@ router.post('/resolver/:id', async (req, res) => {
 
   await req.io.emit("estadoActualizado", { id, nuevoEstado: "COMPLETADO" });
 
-  res.redirect('/reclamos');
+  res.redirect(`/reclamos/${id}`);
 });
 
 router.post('/en_proceso/:id', async (req, res) => {
@@ -249,7 +282,7 @@ router.post('/en_proceso/:id', async (req, res) => {
 
     await req.io.emit("estadoActualizado", { id, nuevoEstado: "EN_PROCESO" });
 
-  res.redirect('/reclamos');
+  res.redirect(`/reclamos/${id}`);
 });
 
 router.post('/pendiente/:id', async (req, res) => {

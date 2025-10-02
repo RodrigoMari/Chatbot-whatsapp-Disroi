@@ -73,7 +73,7 @@ model paso {
   fecha       DateTime? @default(now()) @db.DateTime(0)
   reclamoId   BigInt
   tipo        paso_tipo @default(ANALISIS)
-  persona     Int?
+  persona     String?   @db.VarChar(30)
   foto        String?   @db.VarChar(255)
   reclamo     reclamo   @relation(fields: [reclamoId], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_paso_reclamo")
 
