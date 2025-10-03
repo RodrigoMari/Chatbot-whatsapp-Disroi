@@ -6,6 +6,7 @@ const path = require('path');
 const prisma = new PrismaClient();
 const PDFDocument = require('pdfkit');
 const multer = require('multer');
+const { enviarNotificacion } = require("../src/send_notifications.js");
 
 const storage = multer.diskStorage({
   destination: function(req, file, cb) {
@@ -46,15 +47,13 @@ async function marcarEnProceso(id, endpoint, io) {
   await prisma.reclamo.update({
     where: { id },
     data: {
-      estado: 'EN_PROCESO',
-      tomado_por: suscriptor?.nombre,
-      fecha_tomado: new Date()
+      estado: 'EN_PROCESO'
     }
   });
   io.emit("estadoActualizado", { id, nuevoEstado: "EN_PROCESO" });
 }
 
-async function marcarCompletado(id, endpoint, io) {
+async function marcarCompletado(id, endpoint, io, resolucion) {
   const suscriptor = await prisma.suscripciones.findFirst({ where: { endpoint } });
 
   await prisma.reclamo.update({
@@ -62,7 +61,8 @@ async function marcarCompletado(id, endpoint, io) {
     data: {
       estado: 'COMPLETADO',
       tomado_por: suscriptor?.nombre,
-      fecha_tomado: new Date()
+      fecha_tomado: new Date(),
+      info_resolucion: resolucion
     }
   });
 
@@ -153,7 +153,7 @@ router.get('/:id', async (req, res) => {
 
 router.post('/:id/agregar-paso', upload.single('foto'), async (req, res) => {
   try {
-    const { tipo, descripcion, endpoint } = req.body;
+    const { tipo, descripcion, endpoint, area, resolucion } = req.body;
     let fotoPaths = [];
     if (req.file) {
       fotoPaths = ['/uploads/' + req.file.filename];
@@ -173,8 +173,10 @@ router.post('/:id/agregar-paso', upload.single('foto'), async (req, res) => {
     if (tipo === "ANALISIS" || tipo === "INFORMACION") {
       await marcarEnProceso(req.params.id, endpoint, req.io);
     } else if (tipo === "FINALIZACION") {
-      await marcarCompletado(req.params.id, endpoint, req.io);
+      await marcarCompletado(req.params.id, endpoint, req.io, resolucion);
     }
+
+    await enviarNotificacion([area], `Tiene un nuevo paso de resolución de tipo ${tipo} en reclamo #${req.params.id}`);
   } catch (err) {
     console.error(err);
     res.status(500).send('Error al guardar paso');
@@ -249,6 +251,8 @@ router.get('/:id/pdf-stream', async (req, res) => {
   }
 });
 
+// Estos eran los cambios de estado, cambie la modalidad pero los dejo por si me sirven en el futuro
+/*
 router.post('/resolver/:id', async (req, res) => {
   const id = parseInt(req.params.id);
   const { endpoint } = req.body;
@@ -311,7 +315,7 @@ router.post('/info-resolucion/:id', async (req, res) => {
 
   res.redirect('/reclamos');
 });
-
+*/
 router.get('/reporte', async (req, res) => {
   const { fecha_desde, fecha_hasta } = req.query;
 

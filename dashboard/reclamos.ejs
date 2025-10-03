@@ -250,8 +250,8 @@
         <div class="d-flex justify-content-between align-items-start">
           <h5 class="mb-4">Detalles del Reclamo</h5>
           <div class="text-end">
-            <p class="mb-1"><strong>Fecha Toma:</strong> <span id="popup-fecha-toma"></span></p>
-            <p class="mb-1"><strong>Tomado por:</strong> <span id="popup-usuario-toma"></span></p>
+            <p class="mb-1"><strong>Fecha cerrado:</strong> <span id="popup-fecha-toma"></span></p>
+            <p class="mb-1"><strong>Cerrado por:</strong> <span id="popup-usuario-toma"></span></p>
           </div>
         </div>
 
@@ -267,56 +267,15 @@
         <p><strong>Observación:</strong> <span class="observacion" id="popup-observacion"></span></p>
 
         <div class="popup-buttons">
-          <form id="popup-form-pendiente" method="POST">
-            <input type="hidden" name="endpoint" id="endpoint-pendiente">
-            <button type="submit" class="btn btn-warning text-dark w-100">⏳ Pendiente</button>
-          </form>
-          
-          <form id="popup-form-en-proceso" method="POST">
-            <input type="hidden" name="endpoint" id="endpoint-en-proceso">
-            <button type="submit" class="btn btn-primary w-100">🔄 En proceso</button>
-          </form>
-
-          <form id="popup-form-completado" method="POST">
-            <input type="hidden" name="endpoint" id="endpoint-completado">
-            <button type="submit" class="btn btn-success w-100">✅ Completado</button>
-          </form>
-
-          <button type="button" class="btn btn-info w-100" id="btn-info-resolucion">
-            Revisar resolución
-          </button>
-
           <button type="button" onclick="cerrarPopup('reclamo')" class="btn btn-secondary w-100">❌ Cancelar</button>
         </div>
       </div>
     </div>
 
-<div id="popup-info-resolucion" class="popup-overlay d-none">
-  <div class="popup-content">
-    <div class="mb-3">
-      <h5>📋 Información de Resolución</h5>
-    </div>
-
-    <form id="guardar-informacion-resolucion" method="POST" class="d-flex flex-column gap-3">
-      <!-- Textarea más grande -->
-      <textarea id="info-resolucion-text" name="info_resolucion" class="form-control" rows="6" placeholder="Escribí la información de resolución aquí..."></textarea>
-
-      <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-success flex-fill">💾 Guardar información</button>
-        <button type="button" onclick="cerrarPopup('info-resolucion')" class="btn btn-secondary flex-fill">❌ Cerrar</button>
-      </div>
-    </form>
-  </div>
-</div>
-
 
   </div>
   <script>
     async function mostrarPopup(r) {
-
-      document.getElementById("btn-info-resolucion").onclick = function() {
-        mostrarPopupInfoResolucion(r);
-      };
 
       document.getElementById("popup-fecha-toma").textContent = r.fecha_tomado ? r.fecha_tomado.replace("T", " ").split(".")[0] : "no tomado";
       document.getElementById("popup-usuario-toma").textContent = r.tomado_por || "no tomado";
@@ -332,27 +291,6 @@
       document.getElementById("popup-vendedor").textContent = (r.maestro_21?.vendedor_1 || "sin vendedor") + " / " + (r.maestro_21?.vendedor_2 || "sin vendedor");
       document.getElementById("popup-observacion").textContent = r.observacion_completa;
 
-      document.getElementById("popup-form-completado").action = "/reclamos/resolver/" + r.id;
-      document.getElementById("popup-form-en-proceso").action = "/reclamos/en_proceso/" + r.id;
-      document.getElementById("popup-form-pendiente").action = "/reclamos/pendiente/" + r.id;
-
-      async function setEndpointInputs() {
-        const registration = await navigator.serviceWorker.getRegistration();
-        if (!registration) return;
-
-        const subscription = await registration.pushManager.getSubscription();
-        if (!subscription) return;
-
-        const endpoint = subscription.endpoint;
-
-        document.getElementById("endpoint-en-proceso").value = endpoint;
-        document.getElementById("endpoint-completado").value = endpoint;
-        document.getElementById("endpoint-pendiente").value = endpoint;
-      }
-
-      await setEndpointInputs();
-
-
       document.getElementById("popup-reclamo").classList.remove("d-none");
       document.getElementById("popup-reclamo").classList.add("d-flex");
     }
@@ -362,21 +300,6 @@
       document.getElementById('popup-reporte').classList.add('d-flex');
     });
 
-    document.getElementById('btn-agregar-paso').addEventListener('click', () => {
-      document.getElementById('div-pasos').classList.toggle('d-none');
-      document.getElementById("popup-info-resolucion").action = "/reclamos/info-resolucion/" + r.id;
-    });
-
-    async function mostrarPopupInfoResolucion(r) {
-      document.getElementById("popup-info-resolucion").classList.remove("d-none");
-      document.getElementById("popup-info-resolucion").classList.add("d-flex");
-
-      const textarea = document.getElementById("info-resolucion-text");
-      textarea.value = r.info_resolucion || "";
-
-      document.getElementById("guardar-informacion-resolucion").action = "/reclamos/info-resolucion/" + r.id;
-    }
-
     function cerrarPopup(tipo) {
       if (tipo === 'reporte') {
         document.getElementById('popup-reporte').classList.remove('d-flex');
@@ -384,9 +307,6 @@
       } else if (tipo === 'reclamo') {
         document.getElementById('popup-reclamo').classList.remove('d-flex');
         document.getElementById('popup-reclamo').classList.add('d-none');
-      } else if (tipo === 'info-resolucion') {
-        document.getElementById('popup-info-resolucion').classList.remove('d-flex');
-        document.getElementById('popup-info-resolucion').classList.add('d-none');
       }
     }
   </script>
