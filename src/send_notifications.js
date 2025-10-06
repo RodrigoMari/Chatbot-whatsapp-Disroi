@@ -10,10 +10,11 @@ webpush.setVapidDetails(
 
 const prisma = new PrismaClient();
 
-async function enviarNotificacion(areas, mensaje = "Reclamo en estado pendiente") {
+async function enviarNotificacion(areas, mensaje = "Reclamo en estado pendiente", ) {
     const payload = JSON.stringify({
         title: 'Nuevo reclamo',
-        body: mensaje
+        body: mensaje,
+        url: "https://lorriane-crumbly-speakably.ngrok-free.app/reclamos"
     });
     
     const subs = await prisma.suscripciones.findMany({
