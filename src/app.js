@@ -531,7 +531,7 @@ app.use(express.static(path.join(__dirname, '../dashboard')), checkIPWhitelist);
 app.use(express.static(path.join(__dirname, '../public')));
 const reclamosRouter = require('../dashboard/reclamos.js');
 app.use('/reclamos', checkIPWhitelist, reclamosRouter);
-
+app.use('/reclamo_detalle', checkIPWhitelist, reclamosRouter);
 
 async function saveSubscription(sub) {
   await prisma.suscripciones.create({

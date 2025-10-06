@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Detalle de Reclamo</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body class="bg-light text-dark">
+  <div class="container my-5">
+    <h1 class="text-center fw-bold mb-4">Detalle del Reclamo #<%= reclamo.id %></h1>
+    <div class="mt-4 mb-3">
+      <a href="/reclamos" class="btn btn-outline-secondary">Volver</a>
+    </div>
+
+    <!-- Datos básicos del reclamo -->
+    <div class="card mb-4 shadow-sm">
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <p><strong>Cliente:</strong> <%= reclamo.maestro_21?.nombre || "sin nombre" %></p>
+            <p><strong>Teléfono:</strong> <%= reclamo.maestro_21?.telefono || "sin telefono" %></p>
+            <p><strong>Área:</strong> <%- reclamo.reclamo_area.map(a => a.area).join(', ') %></p>
+            <p><strong>Observación:</strong> <%= reclamo.observacion %></p>
+          </div>
+          <div class="col-md-6 d-flex justify-content-end align-items-center">
+            <% if (reclamo.estado === 'COMPLETADO') { %>
+              <span class="badge fs-1">✅</span>
+            <% } else if (reclamo.estado === 'EN_PROCESO') { %>
+              <span class="badge fs-1">🔄</span>
+            <% } else if (reclamo.estado === 'PENDIENTE') { %>
+              <span class="badge fs-1">⏳</span>
+            <% } %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formulario para agregar paso -->
+    <div class="card mb-4 shadow-sm">
+      <div class="card-header bg-primary text-white">
+        ➕ Agregar paso de resolución
+      </div>
+      <div class="card-body">
+       <form method="POST" action="/reclamos/<%= reclamo.id %>/agregar-paso" class="d-flex flex-column gap-3" enctype="multipart/form-data">
+        <div>
+          <label for="tipo" class="form-label fw-bold">
+            Tipo de paso <span style="color:red">*</span>
+            <span class="text-secondary opacity-75 ms-1">(Tener en cuenta que "Análisis" e "Información" cambiarán el estado del reclamo a "EN PROCESO" mientras que "Finalización" lo cambiará a "COMPLETADO")</span>
+          </label>
+          <select id="tipo" name="tipo" class="form-select" required>
+            <option value="">Seleccionar...</option>
+            <option value="ANALISIS">🔍 Análisis</option>
+            <option value="INFORMACION">ℹ️ Información</option>
+            <option value="FINALIZACION">✅ Finalización</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="descripcion" class="form-label fw-bold">
+            Descripción <span style="color:red">*</span>
+          </label>
+          <textarea id="descripcion" name="descripcion" class="form-control" rows="4" placeholder="Escribe los detalles del paso..." style="border: 1px solid #000" required></textarea>
+        </div>
+
+        <div id="resolucion-container" style="display:none;">
+          <label for="resolucion" class="form-label fw-bold">
+            Resolución del reclamo <span style="color:red">*</span>
+          </label>
+          <select id="resolucion" name="resolucion" class="form-select w-100">
+            <option value="">Selecciona la resolución</option>
+            <option value="SE DESESTIMA EL RECLAMO">Se desestima el reclamo</option>
+            <option value="SE ENVIA LA MERCADERIA CORRESPONDIENTE">Se envía la mercadería correspondiente</option>
+            <option value="SE EFECTUA LA NOTA DE CREDITO">Se efectúa la nota de crédito</option>
+            <option value="SE REVISA EXITOSAMENTE LA DIFERENCIA EN CC">Se revisa exitosamente la diferencia en CC</option>
+            <option value="SE LE NOTIFICA AL VENDEDOR">Se le notifica al vendedor</option>
+            <option value="SE LE HACE EL VALE AL FLETERO">Se le hace el vale al fletero</option>
+            <option value="NO HAY ELEMENTOS PARA CORROBORAR LOS HECHOS">No hay elementos para corroborar los hechos</option>
+            <option value="OTRO">Otro</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6">
+            <label for="foto" class="form-label fw-bold">Agregar foto</label>
+            <input type="file" id="foto" name="foto" class="form-control" accept="image/*" style="border: 1px solid #000">
+          </div>
+          <div class="col-md-6">
+            <label for="area" class="form-label fw-bold">Área</label>
+            <select id="area" name="area" class="form-select w-100">
+              <option value="">Selecciona el área a notificar</option>
+              <option value="VENTAS">Ventas</option>
+              <option value="ADMINISTRACION">Administración</option>
+              <option value="DEPOSITO">Depósito</option>
+              <option value="RRHH">RRHH</option>
+            </select>
+          </div>
+        </div>
+
+        <input type="hidden" name="endpoint" id="endpoint-nombre">
+        <button type="submit" class="btn btn-success mt-3">💾 Guardar Paso</button>
+      </form>
+      </div>
+    </div>
+
+    <!-- Historial de pasos -->
+    <div class="card shadow-sm">
+      <div class="card-header bg-secondary text-white">
+        📜 Historial de Resolución
+      </div>
+      <div class="card-body">
+        <% if (reclamo.paso && reclamo.paso.length > 0) { %>
+          <ul class="list-group">
+            <% reclamo.paso.forEach(function(p, index) { %>
+              <li class="list-group-item">
+                <strong>Paso <%= index + 1 %> - <%= p.tipo %>:</strong> <%= p.descripcion %>  
+                
+                <% if (p.foto) { %>
+                  <br>
+                  <!-- Miniatura clickeable -->
+                  <img src="<%= p.foto %>" 
+                      alt="Foto del paso" 
+                      style="max-width:200px; margin-top:5px; cursor:pointer;" 
+                      data-bs-toggle="modal" 
+                      data-bs-target="#modalFoto<%= p.id %>">
+
+                  <!-- Modal -->
+                  <div class="modal fade" id="modalFoto<%= p.id %>" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-xl">
+                      <div class="modal-content">
+                        <div class="modal-header">
+                          <!-- Botón de cerrar -->
+                          <h5 class="modal-title">Foto del paso</h5>
+                          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                        </div>
+                        <div class="modal-body text-center">
+                          <img src="<%= p.foto %>" class="img-fluid rounded" alt="Foto del paso">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                <% } %>
+
+                <br>
+                <small class="text-muted">
+                  Registrado el <%= new Date(p.fecha).toLocaleString('es-AR') %> 
+                  por <%= p.persona || "Desconocido" %>
+                </small>
+              </li>
+            <% }) %>
+          </ul>
+        <% } else { %>
+          <p class="text-muted">Todavía no hay pasos registrados.</p>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Botón volver -->
+    <div class="mt-4 mb-3">
+      <a href="/reclamos" class="btn btn-outline-secondary">Volver</a>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("tipo").addEventListener("change", function() {
+      const resolucionContainer = document.getElementById("resolucion-container");
+      const resolucionInput = document.getElementById("resolucion");
+
+      if (this.value === "FINALIZACION") {
+        resolucionContainer.style.display = "block";
+        resolucionInput.required = true;
+      } else {
+        resolucionContainer.style.display = "none";
+        resolucionInput.required = false;
+        resolucionInput.value = ""; // limpiar si cambia de idea
+      }
+    });
+
+    async function setEndpointInputs() {
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (!registration) return;
+
+      const subscription = await registration.pushManager.getSubscription();
+      if (!subscription) return;
+
+      const endpoint = subscription.endpoint;
+
+      document.getElementById("endpoint-nombre").value = endpoint;
+      console.log("Valor endpoint seteado:", document.getElementById("endpoint-nombre").value);
+    }
+
+    setEndpointInputs();
+
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    socket.on("estadoActualizado", (data) => {
+
+      location.reload();
+    });
+  </script>
+</body>
+</html>

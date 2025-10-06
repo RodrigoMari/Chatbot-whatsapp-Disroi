@@ -5,6 +5,20 @@ const fs = require('fs');
 const path = require('path');
 const prisma = new PrismaClient();
 const PDFDocument = require('pdfkit');
+const multer = require('multer');
+const { enviarNotificacion } = require("../src/send_notifications.js");
+
+const storage = multer.diskStorage({
+  destination: function(req, file, cb) {
+    cb(null, path.join(__dirname, '../uploads'));
+  },
+  filename: function(req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ storage: storage });
 
 function serializeBigInt(obj) {
   return JSON.parse(JSON.stringify(obj, (key, value) =>
@@ -25,6 +39,34 @@ function calcularHorasHabiles(fechaInicio, fechaFin) {
     }
 
     return totalHoras;
+}
+
+async function marcarEnProceso(id, endpoint, io) {
+  const suscriptor = await prisma.suscripciones.findFirst({ where: { endpoint } });
+
+  await prisma.reclamo.update({
+    where: { id },
+    data: {
+      estado: 'EN_PROCESO'
+    }
+  });
+  io.emit("estadoActualizado", { id, nuevoEstado: "EN_PROCESO" });
+}
+
+async function marcarCompletado(id, endpoint, io, resolucion) {
+  const suscriptor = await prisma.suscripciones.findFirst({ where: { endpoint } });
+
+  await prisma.reclamo.update({
+    where: { id },
+    data: {
+      estado: 'COMPLETADO',
+      tomado_por: suscriptor?.nombre,
+      fecha_tomado: new Date(),
+      info_resolucion: resolucion
+    }
+  });
+
+  io.emit("estadoActualizado", { id, nuevoEstado: "COMPLETADO" });
 }
 
 
@@ -96,6 +138,51 @@ router.get('/', async (req, res) => {
   });
 });
 
+// Mostrar reclamo + pasos
+router.get('/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const reclamo = await prisma.reclamo.findUnique({
+    where: { id },
+    include: { paso: true, maestro_21: true, reclamo_area: true }
+  });
+  if (!reclamo) return res.status(404).send("Reclamo no encontrado");
+
+  res.render("reclamo_detalle", { reclamo });
+});
+
+
+router.post('/:id/agregar-paso', upload.single('foto'), async (req, res) => {
+  try {
+    const { tipo, descripcion, endpoint, area, resolucion } = req.body;
+    let fotoPaths = [];
+    if (req.file) {
+      fotoPaths = ['/uploads/' + req.file.filename];
+    }
+
+    await prisma.paso.create({
+      data: {
+        reclamoId: parseInt(req.params.id),
+        tipo: tipo,
+        descripcion: descripcion,
+        fecha: new Date(),
+        persona: (await prisma.suscripciones.findFirst({ where: { endpoint } })).nombre,
+        foto: fotoPaths.length > 0 ? fotoPaths.join(',') : null,
+      }
+    });
+
+    if (tipo === "ANALISIS" || tipo === "INFORMACION") {
+      await marcarEnProceso(req.params.id, endpoint, req.io);
+    } else if (tipo === "FINALIZACION") {
+      await marcarCompletado(req.params.id, endpoint, req.io, resolucion);
+    }
+
+    await enviarNotificacion([area], `Tiene un nuevo paso de resolución de tipo ${tipo} en reclamo #${req.params.id}`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error al guardar paso');
+  }
+});
+
 // Descargar PDF de un reclamo
 router.get('/:id/pdf', async (req, res) => {
   try {
@@ -164,6 +251,8 @@ router.get('/:id/pdf-stream', async (req, res) => {
   }
 });
 
+// Estos eran los cambios de estado, cambie la modalidad pero los dejo por si me sirven en el futuro
+/*
 router.post('/resolver/:id', async (req, res) => {
   const id = parseInt(req.params.id);
   const { endpoint } = req.body;
@@ -179,7 +268,7 @@ router.post('/resolver/:id', async (req, res) => {
 
   await req.io.emit("estadoActualizado", { id, nuevoEstado: "COMPLETADO" });
 
-  res.redirect('/reclamos');
+  res.redirect(`/reclamos/${id}`);
 });
 
 router.post('/en_proceso/:id', async (req, res) => {
@@ -197,7 +286,7 @@ router.post('/en_proceso/:id', async (req, res) => {
 
     await req.io.emit("estadoActualizado", { id, nuevoEstado: "EN_PROCESO" });
 
-  res.redirect('/reclamos');
+  res.redirect(`/reclamos/${id}`);
 });
 
 router.post('/pendiente/:id', async (req, res) => {
@@ -226,7 +315,7 @@ router.post('/info-resolucion/:id', async (req, res) => {
 
   res.redirect('/reclamos');
 });
-
+*/
 router.get('/reporte', async (req, res) => {
   const { fecha_desde, fecha_hasta } = req.query;
 
