@@ -138,184 +138,6 @@ router.get('/', async (req, res) => {
   });
 });
 
-// Mostrar reclamo + pasos
-router.get('/:id', async (req, res) => {
-  const id = parseInt(req.params.id);
-  const reclamo = await prisma.reclamo.findUnique({
-    where: { id },
-    include: { paso: true, maestro_21: true, reclamo_area: true }
-  });
-  if (!reclamo) return res.status(404).send("Reclamo no encontrado");
-
-  res.render("reclamo_detalle", { reclamo });
-});
-
-
-router.post('/:id/agregar-paso', upload.single('foto'), async (req, res) => {
-  try {
-    const { tipo, descripcion, endpoint, area, resolucion } = req.body;
-    let fotoPaths = [];
-    if (req.file) {
-      fotoPaths = ['/uploads/' + req.file.filename];
-    }
-
-    await prisma.paso.create({
-      data: {
-        reclamoId: parseInt(req.params.id),
-        tipo: tipo,
-        descripcion: descripcion,
-        fecha: new Date(),
-        persona: (await prisma.suscripciones.findFirst({ where: { endpoint } })).nombre,
-        foto: fotoPaths.length > 0 ? fotoPaths.join(',') : null,
-      }
-    });
-
-    if (tipo === "ANALISIS" || tipo === "INFORMACION") {
-      await marcarEnProceso(req.params.id, endpoint, req.io);
-    } else if (tipo === "FINALIZACION") {
-      await marcarCompletado(req.params.id, endpoint, req.io, resolucion);
-    }
-
-    await enviarNotificacion([area], `Tiene un nuevo paso de resolución de tipo ${tipo} en reclamo #${req.params.id}`);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Error al guardar paso');
-  }
-});
-
-// Descargar PDF de un reclamo
-router.get('/:id/pdf', async (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
-
-    const reclamo = await prisma.reclamo.findUnique({
-      where: { id },
-      select: { archivoPdf: true },
-    });
-
-    if (!reclamo || !reclamo.archivoPdf) {
-      return res.status(404).send('PDF no encontrado');
-    }
-
-    const filePath = path.join(__dirname, '..', reclamo.archivoPdf);
-    
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).send('Archivo PDF no encontrado en el servidor');
-    }
-
-    const fileBuffer = fs.readFileSync(filePath);
-    
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="reclamo-${id}.pdf"`);
-    res.send(fileBuffer);
-    
-  } catch (err) {
-    console.error('Error al descargar PDF:', err);
-    res.status(500).send('Error al descargar PDF');
-  }
-});
-
-router.get('/:id/pdf-stream', async (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
-
-    const reclamo = await prisma.reclamo.findUnique({
-      where: { id },
-      select: { archivoPdf: true },
-    });
-
-    if (!reclamo || !reclamo.archivoPdf) {
-      return res.status(404).send('PDF no encontrado');
-    }
-
-    const filePath = path.join(__dirname, '..', reclamo.archivoPdf);
-    
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).send('Archivo PDF no encontrado en el servidor');
-    }
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="reclamo-${id}.pdf"`);
-
-    const fileStream = fs.createReadStream(filePath);
-    fileStream.pipe(res);
-    
-    fileStream.on('error', (err) => {
-      console.error('Error streaming PDF:', err);
-      res.status(500).send('Error al descargar PDF');
-    });
-    
-  } catch (err) {
-    console.error('Error al descargar PDF:', err);
-    res.status(500).send('Error al descargar PDF');
-  }
-});
-
-// Estos eran los cambios de estado, cambie la modalidad pero los dejo por si me sirven en el futuro
-/*
-router.post('/resolver/:id', async (req, res) => {
-  const id = parseInt(req.params.id);
-  const { endpoint } = req.body;
-
-  await prisma.reclamo.update({
-    where: { id },
-    data: {
-      estado: 'COMPLETADO',
-      tomado_por: (await prisma.suscripciones.findFirst({ where: { endpoint } })).nombre,
-      fecha_tomado: new Date()
-    }
-  });
-
-  await req.io.emit("estadoActualizado", { id, nuevoEstado: "COMPLETADO" });
-
-  res.redirect(`/reclamos/${id}`);
-});
-
-router.post('/en_proceso/:id', async (req, res) => {
-  const id = parseInt(req.params.id);
-  const { endpoint } = req.body;
-
-    await prisma.reclamo.update({
-      where: { id },
-      data: {
-        estado: 'EN_PROCESO',
-        tomado_por: (await prisma.suscripciones.findFirst({ where: { endpoint } })).nombre,
-        fecha_tomado: new Date()
-      }
-    });
-
-    await req.io.emit("estadoActualizado", { id, nuevoEstado: "EN_PROCESO" });
-
-  res.redirect(`/reclamos/${id}`);
-});
-
-router.post('/pendiente/:id', async (req, res) => {
-  const id = parseInt(req.params.id);
-
-  await prisma.reclamo.update({
-      where: { id },
-      data: {
-        estado: 'PENDIENTE',
-        tomado_por: null,
-        fecha_tomado: null
-      }
-    });
-
-  res.redirect('/reclamos');
-});
-
-router.post('/info-resolucion/:id', async (req, res) => {
-  const id = parseInt(req.params.id);
-  const { info_resolucion } = req.body;
-
-  await prisma.reclamo.update({
-    where: { id },
-    data: { info_resolucion }
-  });
-
-  res.redirect('/reclamos');
-});
-*/
 router.get('/reporte', async (req, res) => {
   const { fecha_desde, fecha_hasta } = req.query;
 
@@ -390,6 +212,186 @@ router.get('/reporte', async (req, res) => {
 
   doc.end();
 });
+
+// Descargar PDF de un reclamo
+router.get('/:id/pdf', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+
+    const reclamo = await prisma.reclamo.findUnique({
+      where: { id },
+      select: { archivoPdf: true },
+    });
+
+    if (!reclamo || !reclamo.archivoPdf) {
+      return res.status(404).send('PDF no encontrado');
+    }
+
+    const filePath = path.join(__dirname, '..', reclamo.archivoPdf);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).send('Archivo PDF no encontrado en el servidor');
+    }
+
+    const fileBuffer = fs.readFileSync(filePath);
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="reclamo-${id}.pdf"`);
+    res.send(fileBuffer);
+    
+  } catch (err) {
+    console.error('Error al descargar PDF:', err);
+    res.status(500).send('Error al descargar PDF');
+  }
+});
+
+router.get('/:id/pdf-stream', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+
+    const reclamo = await prisma.reclamo.findUnique({
+      where: { id },
+      select: { archivoPdf: true },
+    });
+
+    if (!reclamo || !reclamo.archivoPdf) {
+      return res.status(404).send('PDF no encontrado');
+    }
+
+    const filePath = path.join(__dirname, '..', reclamo.archivoPdf);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).send('Archivo PDF no encontrado en el servidor');
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="reclamo-${id}.pdf"`);
+
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+    
+    fileStream.on('error', (err) => {
+      console.error('Error streaming PDF:', err);
+      res.status(500).send('Error al descargar PDF');
+    });
+    
+  } catch (err) {
+    console.error('Error al descargar PDF:', err);
+    res.status(500).send('Error al descargar PDF');
+  }
+});
+
+// Mostrar reclamo + pasos
+router.get('/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const reclamo = await prisma.reclamo.findUnique({
+    where: { id },
+    include: { paso: true, maestro_21: true, reclamo_area: true }
+  });
+  if (!reclamo) return res.status(404).send("Reclamo no encontrado");
+
+  res.render("reclamo_detalle", { reclamo });
+});
+
+
+router.post('/:id/agregar-paso', upload.single('foto'), async (req, res) => {
+  try {
+    const { tipo, descripcion, endpoint, area, resolucion } = req.body;
+    let fotoPaths = [];
+    if (req.file) {
+      fotoPaths = ['/uploads/' + req.file.filename];
+    }
+
+    await prisma.paso.create({
+      data: {
+        reclamoId: parseInt(req.params.id),
+        tipo: tipo,
+        descripcion: descripcion,
+        fecha: new Date(),
+        persona: (await prisma.suscripciones.findFirst({ where: { endpoint } })).nombre,
+        foto: fotoPaths.length > 0 ? fotoPaths.join(',') : null,
+      }
+    });
+
+    if (tipo === "ANALISIS" || tipo === "INFORMACION") {
+      await marcarEnProceso(req.params.id, endpoint, req.io);
+    } else if (tipo === "FINALIZACION") {
+      await marcarCompletado(req.params.id, endpoint, req.io, resolucion);
+    }
+
+    await enviarNotificacion([area], `Tiene un nuevo paso de resolución de tipo ${tipo} en reclamo #${req.params.id}`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error al guardar paso');
+  }
+});
+
+
+// Estos eran los cambios de estado, cambie la modalidad pero los dejo por si me sirven en el futuro
+/*
+router.post('/resolver/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { endpoint } = req.body;
+
+  await prisma.reclamo.update({
+    where: { id },
+    data: {
+      estado: 'COMPLETADO',
+      tomado_por: (await prisma.suscripciones.findFirst({ where: { endpoint } })).nombre,
+      fecha_tomado: new Date()
+    }
+  });
+
+  await req.io.emit("estadoActualizado", { id, nuevoEstado: "COMPLETADO" });
+
+  res.redirect(`/reclamos/${id}`);
+});
+
+router.post('/en_proceso/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { endpoint } = req.body;
+
+    await prisma.reclamo.update({
+      where: { id },
+      data: {
+        estado: 'EN_PROCESO',
+        tomado_por: (await prisma.suscripciones.findFirst({ where: { endpoint } })).nombre,
+        fecha_tomado: new Date()
+      }
+    });
+
+    await req.io.emit("estadoActualizado", { id, nuevoEstado: "EN_PROCESO" });
+
+  res.redirect(`/reclamos/${id}`);
+});
+
+router.post('/pendiente/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+
+  await prisma.reclamo.update({
+      where: { id },
+      data: {
+        estado: 'PENDIENTE',
+        tomado_por: null,
+        fecha_tomado: null
+      }
+    });
+
+  res.redirect('/reclamos');
+});
+
+router.post('/info-resolucion/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { info_resolucion } = req.body;
+
+  await prisma.reclamo.update({
+    where: { id },
+    data: { info_resolucion }
+  });
+
+  res.redirect('/reclamos');
+});
+*/
 
 
 

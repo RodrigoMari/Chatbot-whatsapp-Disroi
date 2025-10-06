@@ -77,7 +77,7 @@ model paso {
   foto        String?   @db.VarChar(255)
   reclamo     reclamo   @relation(fields: [reclamoId], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_paso_reclamo")
 
-  @@index([reclamoId], map: "reclamoId")
+  @@index([reclamoId], map: "reclamoId_idx")
 }
 
 enum reclamo_estado {
