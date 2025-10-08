@@ -108,8 +108,8 @@ router.get('/', async (req, res) => {
   const now = new Date();
 
   const reclamosSerializados = reclamos.map(r => {
-    let truncatedText = r.observacion.slice(0, 30);
-    if (r.observacion.length > 30) truncatedText += "...";
+    let truncatedText = r.observacion.slice(0, 100);
+    if (r.observacion.length > 100) truncatedText += "...";
 
     const reclamoFecha = new Date(r.fecha_tiempo);
     const diffMs = now - reclamoFecha;

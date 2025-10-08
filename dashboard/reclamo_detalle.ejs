@@ -8,11 +8,11 @@
   <link rel="stylesheet" href="/style.css" />
 </head>
 
-<body class="bg-light text-dark">
+<body class="text-dark">
   <div class="container my-5">
     <h1 class="text-center fw-bold mb-4">Detalle del Reclamo #<%= reclamo.id %></h1>
     <div class="mt-4 mb-3">
-      <a href="/reclamos" class="btn btn-outline-secondary">Volver</a>
+      <a href="/reclamos" class="btn btn-outline-light">Volver</a>
     </div>
 
     <!-- Datos básicos del reclamo -->
@@ -39,8 +39,8 @@
     </div>
 
     <!-- Formulario para agregar paso -->
-    <div class="card mb-4 shadow-sm">
-      <div class="card-header bg-primary text-white">
+    <div class="card mb-4">
+      <div class="card-header text-white" style="background-color: #163b63;">
         ➕ Agregar paso de resolución
       </div>
       <div class="card-body">
@@ -119,27 +119,13 @@
                 
                 <% if (p.foto) { %>
                   <br>
-                  <!-- Miniatura clickeable -->
-                  <img src="<%= p.foto %>" 
-                      alt="Foto del paso" 
-                      style="max-width:200px; margin-top:5px; cursor:pointer;" 
-                      data-bs-toggle="modal" 
-                      data-bs-target="#modalFoto<%= p.id %>">
-
-                  <!-- Modal -->
-                  <div class="modal fade" id="modalFoto<%= p.id %>" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered modal-xl">
-                      <div class="modal-content">
-                        <div class="modal-header">
-                          <!-- Botón de cerrar -->
-                          <h5 class="modal-title">Foto del paso</h5>
-                          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                        </div>
-                        <div class="modal-body text-center">
-                          <img src="<%= p.foto %>" class="img-fluid rounded" alt="Foto del paso">
-                        </div>
-                      </div>
-                    </div>
+                  <!-- Miniatura clickeable - SOLUCIÓN MEJORADA -->
+                  <div class="mt-2">
+                    <img src="<%= p.foto %>" 
+                        alt="Foto del paso <%= index + 1 %>" 
+                        class="img-thumbnail cursor-pointer"
+                        style="max-width:200px; cursor:pointer;" 
+                        onclick="abrirModalFoto('<%= p.foto %>', 'Foto del paso <%= index + 1 %>')">
                   </div>
                 <% } %>
 
@@ -159,11 +145,33 @@
 
     <!-- Botón volver -->
     <div class="mt-4 mb-3">
-      <a href="/reclamos" class="btn btn-outline-secondary">Volver</a>
+      <a href="/reclamos" class="btn btn-outline-light">Volver</a>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalFoto" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalFotoTitle">Foto</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body text-center">
+          <img id="modalFotoImg" src="" class="img-fluid rounded" alt="Foto ampliada">
+        </div>
+      </div>
     </div>
   </div>
 
   <script>
+    function abrirModalFoto(src, title) {
+      document.getElementById('modalFotoImg').src = src;
+      document.getElementById('modalFotoTitle').textContent = title;
+      
+      const modal = new bootstrap.Modal(document.getElementById('modalFoto'));
+      modal.show();
+    }
+
     document.getElementById("tipo").addEventListener("change", function() {
       const resolucionContainer = document.getElementById("resolucion-container");
       const resolucionInput = document.getElementById("resolucion");
