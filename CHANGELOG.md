@@ -1,5 +1,8 @@
 # Changelog
 
+## [1.1.edcd4ce] - 08/10/25
+- Changed visuales
+
 ## [1.1.7762fe5] - 06/10/25
 - Added pasos de resolucion para cada reclamo
 - Added modalidad de información, fotos y notificaciones para cada paso
