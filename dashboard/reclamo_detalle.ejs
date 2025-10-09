@@ -22,7 +22,7 @@
           <div class="col-md-6">
             <p><strong>Cliente:</strong> <%= reclamo.maestro_21?.nombre || "sin nombre" %></p>
             <p><strong>Teléfono:</strong> <%= reclamo.maestro_21?.telefono || "sin telefono" %></p>
-            <p><strong>Área:</strong> <%- reclamo.reclamo_area.map(a => a.area).join(', ') %></p>
+            <p><strong>Área responsable:</strong> <%- reclamo.reclamo_area.map(a => a.area).join(', ') %></p>
             <p><strong>Observación:</strong> <%= reclamo.observacion %></p>
           </div>
           <div class="col-md-6 d-flex justify-content-end align-items-center">
@@ -48,7 +48,7 @@
         <div>
           <label for="tipo" class="form-label fw-bold">
             Tipo de paso <span style="color:red">*</span>
-            <span class="text-secondary opacity-75 ms-1">(Tener en cuenta que "Análisis" e "Información" cambiarán el estado del reclamo a "EN PROCESO" mientras que "Finalización" lo cambiará a "COMPLETADO")</span>
+            <span class="text-secondary opacity-75 ms-1">Tener en cuenta que "Análisis" e "Información" cambiarán el estado del reclamo a "EN PROCESO" mientras que "Finalización" lo cambiará a "COMPLETADO"</span>
           </label>
           <select id="tipo" name="tipo" class="form-select" required>
             <option value="">Seleccionar...</option>
@@ -88,8 +88,8 @@
             <input type="file" id="foto" name="foto" class="form-control" accept="image/*" style="border: 1px solid #000">
           </div>
           <div class="col-md-6">
-            <label for="area" class="form-label fw-bold">Área</label>
-            <select id="area" name="area" class="form-select w-100">
+            <label for="area" class="form-label fw-bold">Área <span style="color:red">*</span> <span class="text-secondary opacity-75 ms-1">Asegúrese de poner correctamente el área responsable del siguiente paso</span></label>
+            <select id="area" name="area" class="form-select w-100" required>
               <option value="">Selecciona el área a notificar</option>
               <option value="VENTAS">Ventas</option>
               <option value="ADMINISTRACION">Administración</option>
@@ -99,7 +99,7 @@
           </div>
         </div>
 
-        <input type="hidden" name="endpoint" id="endpoint-nombre">
+        <input type="hidden" name="endpoint" id="endpoint-actual">
         <button type="submit" class="btn btn-success mt-3">💾 Guardar Paso</button>
       </form>
       </div>
@@ -119,7 +119,7 @@
                 
                 <% if (p.foto) { %>
                   <br>
-                  <!-- Miniatura clickeable - SOLUCIÓN MEJORADA -->
+                  <!-- Foto clickeable -->
                   <div class="mt-2">
                     <img src="<%= p.foto %>" 
                         alt="Foto del paso <%= index + 1 %>" 
@@ -132,11 +132,18 @@
                 <br>
                 <small class="text-muted">
                   Registrado el <%= new Date(p.fecha).toLocaleString('es-AR') %> 
-                  por <%= p.persona || "Desconocido" %>
+                  por <%= p.persona || "Desconocido" %> de <%= p.area_paso || "Área no especificada" %>
+                  <% if (reclamo.paso.info_resolucion) { %> | Resolución: <em><%= reclamo.paso.info_resolucion %></em> <% } %>
                 </small>
               </li>
             <% }) %>
           </ul>
+
+          <% if (reclamo.info_resolucion) { %>
+            <div class="alert alert-success mt-3">
+              <strong>🟩 Resolución final:</strong> <em><%= reclamo.info_resolucion %></em>
+            </div>
+          <% } %>
         <% } else { %>
           <p class="text-muted">Todavía no hay pasos registrados.</p>
         <% } %>
@@ -187,16 +194,15 @@
     });
 
     async function setEndpointInputs() {
-      const registration = await navigator.serviceWorker.getRegistration();
-      if (!registration) return;
+//      const registration = await navigator.serviceWorker.getRegistration();
+//      if (!registration) return;
 
-      const subscription = await registration.pushManager.getSubscription();
-      if (!subscription) return;
+//      const subscription = await registration.pushManager.getSubscription();
+//      if (!subscription) return;
 
-      const endpoint = subscription.endpoint;
+//      const endpoint = subscription.endpoint;
 
-      document.getElementById("endpoint-nombre").value = endpoint;
-      console.log("Valor endpoint seteado:", document.getElementById("endpoint-nombre").value);
+      document.getElementById("endpoint-actual").value = "https://fcm.googleapis.com/fcm/send/dbAsF8cJNQQ:APA91bGfqSeE_lHhqHHVFTEY4TZDcJrT2EWvbG2xj3RhacBUdFOulwizLO7CmMaKtPYUfvjcOwAhE20gssKkg44JHviiMmZdiaKEEks9FUuKM2ev-1GXAALcfsX1Tp5kg_mumWYpGRAy"; //endpoint;
     }
 
     setEndpointInputs();
