@@ -147,6 +147,12 @@ app.post('/webhook', async (req, res) => {
                     observacion: datos.observacion || body,
                 }
             });
+
+            await prisma.maestro_cliente.update({
+                where: { codigo: datos.cliente_id },
+                data: { telefono: waId }
+            });
+
             enviarNotificacion(datos.area, `Reclamo "${datos.tipo}" de cliente ID "${datos.cliente_id || "No identificado"}"`);
             if(datos.cliente_id) {
                     const cliente = await prisma.maestro_cliente.findFirst({where: { codigo: datos.cliente_id }});
@@ -527,11 +533,11 @@ app.post('/webhook', async (req, res) => {
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../dashboard'));
-app.use(express.static(path.join(__dirname, '../dashboard')));//, checkIPWhitelist);
+app.use(express.static(path.join(__dirname, '../dashboard')), checkIPWhitelist);
 app.use(express.static(path.join(__dirname, '../public')));
 const reclamosRouter = require('../dashboard/reclamos.js');
-app.use('/reclamos', reclamosRouter);
-app.use('/reclamo_detalle', reclamosRouter);
+app.use('/reclamos',checkIPWhitelist, reclamosRouter);
+app.use('/reclamo_detalle',checkIPWhitelist, reclamosRouter);
 
 async function saveSubscription(sub) {
   await prisma.suscripciones.create({

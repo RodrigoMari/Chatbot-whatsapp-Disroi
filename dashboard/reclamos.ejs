@@ -113,7 +113,7 @@
   </script>
 
 
-  <div id="main-content" class="d-display"> <!--d-none-->
+  <div id="main-content" class="d-none"> <!--d-none-->
     <div class="container my-5">
       <h1 class="text-center fw-bold mb-4">Gestión de Reclamos</h1>
       <button id="reporte" class="btn btn-primary mb-3">Generar Reporte</button>
@@ -156,21 +156,45 @@
       </form>
 
       <!-- Leyenda de estados por tardanza -->
-      <div class="mb-3 d-flex align-items-center gap-3">
-        <span class="fw-bold text-white">Tardanza:</span>
-        <span class="d-inline-flex align-items-center text-white">
-          <span style="display:inline-block;width:18px;height:18px;background:#fffb00;border-radius:4px;margin-right:6px;border:1px solid #fffb00;"></span>
-          24h
-        </span>
-        <span class="d-inline-flex align-items-center text-white">
-          <span style="display:inline-block;width:18px;height:18px;background:#fd7e14;border-radius:4px;margin-right:6px;border:1px solid #fd7e14;"></span>
-          48h
-        </span>
-        <span class="d-inline-flex align-items-center text-white">
-          <span style="display:inline-block;width:18px;height:18px;background:#fd1e34;border-radius:4px;margin-right:6px;border:1px solid #fd1e34;"></span>
-          72h
-        </span>
+      <div class="mb-3 d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <!-- Tardanza a la izquierda -->
+        <div class="d-flex align-items-center gap-3">
+          <span class="fw-bold text-white">Tardanza:</span>
+          <span class="d-inline-flex align-items-center text-white">
+            <span style="display:inline-block;width:18px;height:18px;background:#fffb00;border-radius:4px;margin-right:6px;border:1px solid #fffb00;"></span>
+            24h
+          </span>
+          <span class="d-inline-flex align-items-center text-white">
+            <span style="display:inline-block;width:18px;height:18px;background:#fd7e14;border-radius:4px;margin-right:6px;border:1px solid #fd7e14;"></span>
+            48h
+          </span>
+          <span class="d-inline-flex align-items-center text-white">
+            <span style="display:inline-block;width:18px;height:18px;background:#fd1e34;border-radius:4px;margin-right:6px;border:1px solid #fd1e34;"></span>
+            72h
+          </span>
+        </div>
+        <!-- Área responsable a la derecha -->
+        <div class="d-flex align-items-center gap-3">
+          <span class="fw-bold text-white">Área responsable:</span>
+          <span class="d-inline-flex align-items-center text-white">
+            <span style="display:inline-block;width:18px;height:18px;background:#721c24;border-radius:4px;margin-right:6px;border:1px solid #721c24;"></span>
+            Ventas
+          </span>
+          <span class="d-inline-flex align-items-center text-white">
+            <span style="display:inline-block;width:18px;height:18px;background:#155724;border-radius:4px;margin-right:6px;border:1px solid #155724;"></span>
+            Administración
+          </span>
+          <span class="d-inline-flex align-items-center text-white">
+            <span style="display:inline-block;width:18px;height:18px;background:#856404;border-radius:4px;margin-right:6px;border:1px solid #856404;"></span>
+            Depósito
+          </span>
+          <span class="d-inline-flex align-items-center text-white">
+            <span style="display:inline-block;width:18px;height:18px;background:#004085;border-radius:4px;margin-right:6px;border:1px solid #004085;"></span>
+            RRHH
+          </span>
+        </div>
       </div>
+
 
       <div class="table-responsive">
         <table class="table table-hover align-middle text-center custom-table">
@@ -201,7 +225,22 @@
                 <td><%= r.maestro_21?.nombre || "sin nombre" %></td>
                 <td><%= /\d/.test(r.maestro_21?.telefono || "") ? r.maestro_21.telefono : "sin telefono" %></td>
                 <td><%= r.tipo %></td>
-                <td><%- r.reclamo_area.map(a => a.area).join('<br />') %></td>
+                <td>
+                 <% if (r.reclamo_area.length === 1) { 
+                      let areaClean = r.reclamo_area[0].area.replace(/[\[\]]/g, '');
+                  %>
+                    <span class="area-label area-<%= areaClean %>">
+                      <%= areaClean %>
+                    </span>
+                  <% } else if (r.reclamo_area.length > 1) { %>
+                    <%- r.reclamo_area.map(a => {
+                          let areaClean = a.area.replace(/[\[\]]/g, '');
+                          return `<span class="area-label area-${areaClean}">${areaClean}</span>`;
+                        }).join('<br />') %>
+                  <% } else { %>
+                    <span class="text-muted">Sin área</span>
+                  <% } %>
+                </td>
                 <td><%= r.cod_factura || "sin factura" %></td>
                 <td><%= r.maestro_21?.vendedor_1 || "-" %> / <%= r.maestro_21?.vendedor_2 || "-" %></td>
                 <td><%= r.observacion %></td>
