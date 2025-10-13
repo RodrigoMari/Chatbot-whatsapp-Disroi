@@ -309,7 +309,19 @@ router.post('/:id/agregar-paso', upload.single('foto'), async (req, res) => {
         descripcion: descripcion,
         fecha: new Date(),
         persona: (await prisma.suscripciones.findFirst({ where: { endpoint } })).nombre,
+        area_paso: (await prisma.suscripciones.findFirst({ where: { endpoint } })).area,
         foto: fotoPaths.length > 0 ? fotoPaths.join(',') : null,
+      }
+    });
+
+    await prisma.reclamo_area.deleteMany({
+      where: { reclamo_Id: parseInt(req.params.id) }
+    });
+
+    await prisma.reclamo_area.create({
+      data: {
+        reclamo_Id: parseInt(req.params.id),
+        area: area
       }
     });
 

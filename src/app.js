@@ -147,6 +147,12 @@ app.post('/webhook', async (req, res) => {
                     observacion: datos.observacion || body,
                 }
             });
+
+            await prisma.maestro_cliente.update({
+                where: { codigo: datos.cliente_id },
+                data: { telefono: waId }
+            });
+
             enviarNotificacion(datos.area, `Reclamo "${datos.tipo}" de cliente ID "${datos.cliente_id || "No identificado"}"`);
             if(datos.cliente_id) {
                     const cliente = await prisma.maestro_cliente.findFirst({where: { codigo: datos.cliente_id }});
