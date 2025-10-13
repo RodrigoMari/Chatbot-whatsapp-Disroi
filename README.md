@@ -1,4 +1,4 @@
 # Plataforma de Reclamos
-**Versión actual:** 1.1.edcd4ce
+**Versión actual:** 1.1.cdc100c
 
 📄 [Ver Changelog](./CHANGELOG.md)
