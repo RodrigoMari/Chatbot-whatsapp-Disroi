@@ -1,0 +1,4 @@
+{
+  "exec": "node --no-warnings",
+  "ext": "js,json"
+}

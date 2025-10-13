@@ -3,6 +3,7 @@ const twilio = require('./twilio.js');
 const { PrismaClient } = require('@prisma/client');
 const http = require("http");
 const fs = require('fs');
+const { marked } = require('marked');
 const cron = require("node-cron");
 const { enviarNotificacionesVencidas, enviarNotificacion } = require("./send_notifications.js");
 const { Server } = require("socket.io");
@@ -536,8 +537,8 @@ app.set('views', path.join(__dirname, '../dashboard'));
 app.use(express.static(path.join(__dirname, '../dashboard')), checkIPWhitelist);
 app.use(express.static(path.join(__dirname, '../public')));
 const reclamosRouter = require('../dashboard/reclamos.js');
-app.use('/reclamos', checkIPWhitelist, reclamosRouter);
-app.use('/reclamo_detalle', checkIPWhitelist, reclamosRouter);
+app.use('/reclamos', checkIPWhitelist, reclamosRouter); //checkIPWhitelist
+app.use('/reclamo_detalle', checkIPWhitelist, reclamosRouter); //checkIPWhitelist
 
 async function saveSubscription(sub) {
   await prisma.suscripciones.create({
@@ -552,6 +553,23 @@ async function saveSubscription(sub) {
     }
   });
 }
+
+app.get('/changelog', (req, res) => {
+    const changelogPath = path.join(__dirname, '../CHANGELOG.md');
+
+    fs.readFile(changelogPath, 'utf8', (err, data) => {
+        if (err) {
+            console.error('Error al leer el archivo CHANGELOG.md:', err);
+            return res.status(500).send('Error interno del servidor.');
+        }
+
+        const htmlContent = marked(data);
+
+        res.render('changelog', {
+            changelogHtml: htmlContent
+        });
+    });
+});
 
 app.get('/check-subscription', async (req, res) => {
     try {
