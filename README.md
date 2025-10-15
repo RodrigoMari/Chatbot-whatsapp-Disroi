@@ -1,8 +1,7 @@
-```
-**Versión actual:** 1.1.cdc100c
-
-📄 [Ver Changelog](./CHANGELOG.md)
-```
+<div style="border:1px solid #cccccc3d; padding:8px; border-radius:4px;">
+  <strong>Versión actual:</strong> 1.1.cdc100c <br>
+  📄 <a href="./CHANGELOG.md">Ver Changelog</a>
+</div>
 
 # "Rodri", chatbot de whatsapp y plataforma de reclamos
 
