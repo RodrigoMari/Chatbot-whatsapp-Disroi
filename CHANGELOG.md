@@ -1,5 +1,8 @@
 # Changelog
 
+## [1.1.2015ea8] - 16/10/25
+- Fixed existía un problema en el cual dejaba poner el area a notificar en el paso de resolución
+
 ## [1.1.cdc100c] - 13/10/25
 - Added el reclamo muestra en la página principal quién es el responsable actual de dicho reclamo
 - Added un cartel visual en la pestaña de pasos encargada de mostrar la resolución del reclamo
