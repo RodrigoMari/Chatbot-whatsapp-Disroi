@@ -314,6 +314,16 @@ router.post('/:id/agregar-paso', upload.single('foto'), async (req, res) => {
       }
     });
 
+    let areaValue = null;
+
+    if (tipo === "ANALISIS" || tipo === "INFORMACION") {
+      await marcarEnProceso(req.params.id, endpoint, req.io);
+    } else if (tipo === "FINALIZACION") {
+      await marcarCompletado(req.params.id, endpoint, req.io, resolucion);
+      const suscripcion = await prisma.suscripciones.findFirst({ where: { endpoint } });
+      areaValue = suscripcion?.area || null;
+    }
+
     await prisma.reclamo_area.deleteMany({
       where: { reclamo_Id: parseInt(req.params.id) }
     });
@@ -321,15 +331,10 @@ router.post('/:id/agregar-paso', upload.single('foto'), async (req, res) => {
     await prisma.reclamo_area.create({
       data: {
         reclamo_Id: parseInt(req.params.id),
-        area: area
+        ...((tipo === "ANALISIS" || tipo === "INFORMACION") && { area: area }),
+        ...(tipo === "FINALIZACION" && { area: areaValue }),
       }
     });
-
-    if (tipo === "ANALISIS" || tipo === "INFORMACION") {
-      await marcarEnProceso(req.params.id, endpoint, req.io);
-    } else if (tipo === "FINALIZACION") {
-      await marcarCompletado(req.params.id, endpoint, req.io, resolucion);
-    }
 
     await enviarNotificacion([area], `Tiene un nuevo paso de resolución de tipo ${tipo} en reclamo #${req.params.id}`);
   } catch (err) {
