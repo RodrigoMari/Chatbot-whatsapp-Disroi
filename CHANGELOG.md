@@ -1,5 +1,8 @@
 # Changelog
 
+## [1.1.0cf364e] - 22/10/25
+- Added nuevo tipo de reclamo "Devolución de producto"
+
 ## [1.1.2015ea8] - 16/10/25
 - Fixed existía un problema en el cual dejaba poner el area a notificar en el paso de resolución
 
