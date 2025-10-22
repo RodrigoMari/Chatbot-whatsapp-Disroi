@@ -127,7 +127,7 @@ app.post('/webhook', async (req, res) => {
             datos.observacion = datos.observacion + "\nObservación: " + body;
         }
 
-        if(datos.tipo === 'Faltante/Rotura producto' || datos.tipo === 'Solicitud NDC') {
+        if(datos.tipo === 'Faltante/Rotura producto' || datos.tipo === 'Solicitud NDC' || datos.tipo === 'Devolución producto') {
             datos.observacion = datos.observacion + "\nObservación: " + body;
         }
 
@@ -344,6 +344,17 @@ app.post('/webhook', async (req, res) => {
                 };
                 break;
 
+        case 'Devolución producto':
+                twilio.sendMessage(waId, "Para terminar de registrar su reclamo le pido que nos comunique, en 1 solo mensaje, qué *productos* quiere devolver.\n\n"
+                    + "💡​ Por favor, mencione los códigos de producto especificados en la factura para que no haya confusión");
+
+                estados[waId] = {
+                    ...estados[waId],
+                    paso: 'productos',
+                    cod_factura: body,
+                };
+                break;
+
             case 'Solicitud NDC':
                 twilio.sendMessage(waId, "Para terminar de registrar su reclamo le pido que nos comunique, en 1 solo mensaje, qué *productos* son los implicados.\n\n"
                     + "💡 Por favor, mencione solo los códigos de productos a los que le falta la nota de crédito.");
@@ -421,6 +432,19 @@ app.post('/webhook', async (req, res) => {
                     area: ['DEPOSITO', 'GC'],
                 };
                 break;
+
+            case 'Devolución producto':
+                twilio.sendMessage(waId, "📜​ Para continuar, por favor, escribe el *codigo de factura* de *5 o 6 dígitos (sin ceros)* referido a esta diferencia\n\n"
+                    + "💡​ Como dato, las facturas de *6 digitos* corresponden a *facturas tipo A* mientras que las de *5 digitos* a *facturas tipo B*");
+
+                estados[waId] = {
+                    ...estados[waId],
+                    paso: 'factura',
+                    tipo: ListTitle,
+                    area: ['DEPOSITO', 'GC'],
+                };
+                break;
+
             case 'Mi vendedor no me visitó':
                 twilio.sendMessage(waId, "🙏​ Le pedimos disculpas de parte del equipo de Disroi\n\n"
                             + "⬇️​ Para terminar, escriba alguna observación que nos pueda dar contexto de la situación.");
