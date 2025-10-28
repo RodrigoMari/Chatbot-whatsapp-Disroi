@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.daa4f89] - 28/10/25
+- Added nuevo tipo de finalización de reclamo "SE RETIRA LA MERCADERIA INDICADA POR OR"
+- Deleted "Reclamo alternativo" (por fin)
+- Changed dinámica de la foto en los pasos de resolución
+
 ## [1.1.0cf364e] - 22/10/25
 - Added nuevo tipo de reclamo "Devolución de producto"
 

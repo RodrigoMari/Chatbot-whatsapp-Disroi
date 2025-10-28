@@ -1,5 +1,5 @@
 <div style="border:1px solid #cccccc3d; padding:8px; border-radius:4px;">
-  <strong>Versión actual:</strong> 1.1.0cf364e <br>
+  <strong>Versión actual:</strong> 1.1.daa4f89 <br>
   📄 <a href="./CHANGELOG.md">Ver Changelog</a>
 </div>
 
