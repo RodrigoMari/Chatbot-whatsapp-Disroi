@@ -78,25 +78,34 @@
             <option value="SE LE NOTIFICA AL VENDEDOR">Se le notifica al vendedor</option>
             <option value="SE LE HACE EL VALE AL FLETERO">Se le hace el vale al fletero</option>
             <option value="NO HAY ELEMENTOS PARA CORROBORAR LOS HECHOS">No hay elementos para corroborar los hechos</option>
+            <option value="SE RETIRA LA MERCADERIA INDICADA POR OR">se retira la mercadería indicada por OR</option>
             <option value="OTRO">Otro</option>
           </select>
         </div>
 
-        <div class="row">
-          <div class="col-md-6">
-            <label for="foto" class="form-label fw-bold">Agregar foto</label>
-            <input type="file" id="foto" name="foto" class="form-control" accept="image/*" style="border: 1px solid #000">
+        <div id="area-container" class="">
+          <label for="area" class="form-label fw-bold">Área <span style="color:red">*</span> <span class="text-secondary opacity-75 ms-1">Asegúrese de poner correctamente el área responsable del siguiente paso</span></label>
+          <select id="area" name="area" class="form-select w-100" required>
+            <option value="">Selecciona el área a notificar</option>
+            <option value="VENTAS">Ventas</option>
+            <option value="ADMINISTRACION">Administración</option>
+            <option value="DEPOSITO">Depósito</option>
+            <option value="RRHH">RRHH</option>
+          </select>
+        </div>
+
+        <div class="">
+          <label for="foto" class="form-label fw-bold">Agregar foto</label>
+          
+          <div id="drop-zone" class="drop-zone" tabindex="0">
+            <p id="drop-zone-text">Arrastra una imagen aquí, pégala, o haz clic para seleccionar</p>
+            
+            <img id="preview-image" src="" alt="Vista previa de la imagen">
+            
+            <button type="button" id="remove-image" class="btn-close" aria-label="Quitar imagen"></button>
           </div>
-          <div id="area-container" class="col-md-6">
-            <label for="area" class="form-label fw-bold">Área <span style="color:red">*</span> <span class="text-secondary opacity-75 ms-1">Asegúrese de poner correctamente el área responsable del siguiente paso</span></label>
-            <select id="area" name="area" class="form-select w-100" required>
-              <option value="">Selecciona el área a notificar</option>
-              <option value="VENTAS">Ventas</option>
-              <option value="ADMINISTRACION">Administración</option>
-              <option value="DEPOSITO">Depósito</option>
-              <option value="RRHH">RRHH</option>
-            </select>
-          </div>
+          
+          <input type="file" id="foto" name="foto" class="form-control" accept="image/*" style="display: none;">
         </div>
 
         <input type="hidden" name="endpoint" id="endpoint-actual">
@@ -179,6 +188,102 @@
       modal.show();
     }
 
+    document.addEventListener('DOMContentLoaded', () => {
+      const dropZone = document.getElementById('drop-zone');
+      const hiddenInput = document.getElementById('foto');
+      const previewImage = document.getElementById('preview-image');
+      const dropZoneText = document.getElementById('drop-zone-text');
+      const removeButton = document.getElementById('remove-image');
+
+      // --- Funciones principales ---
+
+      // Función para manejar el archivo (ya sea soltado, pegado o seleccionado)
+      function handleFile(file) {
+        if (file && file.type.startsWith('image/')) {
+          // Asigna el archivo al input oculto
+          // Usamos DataTransfer para poder asignar el archivo al 'files' del input
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(file);
+          hiddenInput.files = dataTransfer.files;
+
+          // Muestra la vista previa
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            previewImage.src = e.target.result;
+            previewImage.style.display = 'block';
+            removeButton.style.display = 'block';
+            dropZoneText.style.display = 'none';
+          };
+          reader.readAsDataURL(file);
+        } else {
+          alert("Por favor, selecciona o suelta solo archivos de imagen.");
+        }
+      }
+
+      // Función para resetear la zona
+      function resetDropZone() {
+        hiddenInput.value = ''; // Limpia el input
+        previewImage.src = '';
+        previewImage.style.display = 'none';
+        removeButton.style.display = 'none';
+        dropZoneText.style.display = 'block';
+      }
+
+      // --- Asignación de Eventos ---
+
+      // 1. Clic: Abre el selector de archivos
+      dropZone.addEventListener('click', () => {
+        hiddenInput.click();
+      });
+
+      // 2. Change (cuando se selecciona un archivo)
+      hiddenInput.addEventListener('change', () => {
+        if (hiddenInput.files.length > 0) {
+          handleFile(hiddenInput.files[0]);
+        }
+      });
+
+      // 3. Drag (Arrastrar sobre la zona)
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault(); // Previene el comportamiento por defecto
+        dropZone.classList.add('drag-over');
+      });
+
+      // 4. Drag (Salir de la zona)
+      dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+      });
+
+      // 5. Drop (Soltar el archivo)
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        
+        if (e.dataTransfer.files.length > 0) {
+          handleFile(e.dataTransfer.files[0]);
+        }
+      });
+
+      // 6. Paste (Pegar desde el portapapeles)
+      // Se asigna a la 'dropZone' (con tabindex="0" se puede "focusear")
+      dropZone.addEventListener('paste', (e) => {
+        e.preventDefault();
+        
+        if (e.clipboardData.files.length > 0) {
+          handleFile(e.clipboardData.files[0]);
+        }
+      });
+
+      // 7. Clic en "Quitar imagen"
+      removeButton.addEventListener('click', (e) => {
+        e.stopPropagation(); // Evita que se dispare el 'click' del dropZone
+        resetDropZone();
+      });
+
+      resetDropZone();
+    });
+
     document.getElementById("tipo").addEventListener("change", function() {
       const resolucionContainer = document.getElementById("resolucion-container");
       const resolucionInput = document.getElementById("resolucion");
@@ -201,15 +306,15 @@
     });
 
     async function setEndpointInputs() {
-      const registration = await navigator.serviceWorker.getRegistration();
-      if (!registration) return;
+//      const registration = await navigator.serviceWorker.getRegistration();
+//      if (!registration) return;
 
-      const subscription = await registration.pushManager.getSubscription();
-      if (!subscription) return;
+//      const subscription = await registration.pushManager.getSubscription();
+//      if (!subscription) return;
 
-      const endpoint = subscription.endpoint;
+//      const endpoint = subscription.endpoint;
 
-      document.getElementById("endpoint-actual").value = endpoint;
+      document.getElementById("endpoint-actual").value = "https://fcm.googleapis.com/fcm/send/dbAsF8cJNQQ:APA91bGfqSeE_lHhqHHVFTEY4TZDcJrT2EWvbG2xj3RhacBUdFOulwizLO7CmMaKtPYUfvjcOwAhE20gssKkg44JHviiMmZdiaKEEks9FUuKM2ev-1GXAALcfsX1Tp5kg_mumWYpGRAy"; //endpoint;
     }
 
     setEndpointInputs();

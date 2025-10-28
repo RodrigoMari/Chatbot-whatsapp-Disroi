@@ -44,7 +44,7 @@ const nosoycliente = "HXf7ce18d882ee63a3c0e46552b2bf1e12"
 
 const main = "HX6870b1d969384339885c8fa36ad104b0"
 
-const reclamo = "HX0f0d449da0cdf0f47558162b99399b05"
+const reclamo = "HX31cbbeaf5db059b9ce8019cbd7d971f8"
 const pedido = "HX25d7f54ba8b3d54d947652ffac9b8703"
 const sobreNosotros = "HXfc73d64a5f842aded7fac0af5d082fff"
 
@@ -504,16 +504,6 @@ app.post('/webhook', async (req, res) => {
                     area: ['VENTAS', 'GC'],
                 };
 
-                break;
-            case 'Reclamo alternativo':
-                twilio.sendMessage(waId, "🚀 Estoy en constante mejora para una mejor atención\n\n"
-                            + "Registre su reclamo escribiendo sus inconvenientes, si el reclamo es recurrente, será agregado al flujo en el futuro");
-                estados[waId] = {
-                    ...estados[waId],
-                    paso: 'guardar',
-                    tipo: ListTitle,
-                    area: ['VENTAS', 'ADMINISTRACION', 'DEPOSITO', 'GC'],
-                };
                 break;
         }
 
