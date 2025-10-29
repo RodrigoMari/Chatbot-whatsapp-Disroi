@@ -306,15 +306,15 @@
     });
 
     async function setEndpointInputs() {
-//      const registration = await navigator.serviceWorker.getRegistration();
-//      if (!registration) return;
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (!registration) return;
 
-//      const subscription = await registration.pushManager.getSubscription();
-//      if (!subscription) return;
+      const subscription = await registration.pushManager.getSubscription();
+      if (!subscription) return;
 
-//      const endpoint = subscription.endpoint;
+      const endpoint = subscription.endpoint;
 
-      document.getElementById("endpoint-actual").value = "https://fcm.googleapis.com/fcm/send/dbAsF8cJNQQ:APA91bGfqSeE_lHhqHHVFTEY4TZDcJrT2EWvbG2xj3RhacBUdFOulwizLO7CmMaKtPYUfvjcOwAhE20gssKkg44JHviiMmZdiaKEEks9FUuKM2ev-1GXAALcfsX1Tp5kg_mumWYpGRAy"; //endpoint;
+      document.getElementById("endpoint-actual").value = endpoint;
     }
 
     setEndpointInputs();
