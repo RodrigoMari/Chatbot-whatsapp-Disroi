@@ -148,7 +148,7 @@
             <% }) %>
           </ul>
 
-          <% if (reclamo.info_resolucion) { %>
+          <% if (reclamo.estado === "COMPLETADO") { %>
             <div class="alert alert-success mt-3">
               <strong>🟩 Resolución final:</strong> <em><%= reclamo.info_resolucion %></em>
             </div>
@@ -195,13 +195,9 @@
       const dropZoneText = document.getElementById('drop-zone-text');
       const removeButton = document.getElementById('remove-image');
 
-      // --- Funciones principales ---
-
       // Función para manejar el archivo (ya sea soltado, pegado o seleccionado)
       function handleFile(file) {
         if (file && file.type.startsWith('image/')) {
-          // Asigna el archivo al input oculto
-          // Usamos DataTransfer para poder asignar el archivo al 'files' del input
           const dataTransfer = new DataTransfer();
           dataTransfer.items.add(file);
           hiddenInput.files = dataTransfer.files;
@@ -222,40 +218,38 @@
 
       // Función para resetear la zona
       function resetDropZone() {
-        hiddenInput.value = ''; // Limpia el input
+        hiddenInput.value = '';
         previewImage.src = '';
         previewImage.style.display = 'none';
         removeButton.style.display = 'none';
         dropZoneText.style.display = 'block';
       }
 
-      // --- Asignación de Eventos ---
-
-      // 1. Clic: Abre el selector de archivos
+      // Clic: Abre el selector de archivos
       dropZone.addEventListener('click', () => {
         hiddenInput.click();
       });
 
-      // 2. Change (cuando se selecciona un archivo)
+      // Change
       hiddenInput.addEventListener('change', () => {
         if (hiddenInput.files.length > 0) {
           handleFile(hiddenInput.files[0]);
         }
       });
 
-      // 3. Drag (Arrastrar sobre la zona)
+      // Drag
       dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault(); // Previene el comportamiento por defecto
+        e.preventDefault();
         dropZone.classList.add('drag-over');
       });
 
-      // 4. Drag (Salir de la zona)
+      // Drag
       dropZone.addEventListener('dragleave', (e) => {
         e.preventDefault();
         dropZone.classList.remove('drag-over');
       });
 
-      // 5. Drop (Soltar el archivo)
+      // Drop
       dropZone.addEventListener('drop', (e) => {
         e.preventDefault();
         dropZone.classList.remove('drag-over');
@@ -265,8 +259,7 @@
         }
       });
 
-      // 6. Paste (Pegar desde el portapapeles)
-      // Se asigna a la 'dropZone' (con tabindex="0" se puede "focusear")
+      // Paste
       dropZone.addEventListener('paste', (e) => {
         e.preventDefault();
         
@@ -275,7 +268,7 @@
         }
       });
 
-      // 7. Clic en "Quitar imagen"
+      // Clic en "Quitar imagen"
       removeButton.addEventListener('click', (e) => {
         e.stopPropagation(); // Evita que se dispare el 'click' del dropZone
         resetDropZone();
