@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.3d5bf84] - 26/12/25
+- Added nuevo tipo de finalización de reclamo "SE REVISA EL CURRICULUM"
+- Fixed existía un problema en el cual el cartel de finalización de reclamo seguía apareciendo al re-abrir un reclamo
+
 ## [1.1.daa4f89] - 28/10/25
 - Added nuevo tipo de finalización de reclamo "SE RETIRA LA MERCADERIA INDICADA POR OR"
 - Deleted "Reclamo alternativo" (por fin)
