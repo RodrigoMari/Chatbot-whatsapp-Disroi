@@ -1,5 +1,8 @@
 # Changelog
 
+## [1.1.e244f26] - 17/01/25
+- Changed ahora retiro de mercaderia y devoluciones deriva directamente a VENTAS
+
 ## [1.1.3d5bf84] - 26/12/25
 - Added nuevo tipo de finalización de reclamo "SE REVISA EL CURRICULUM"
 - Fixed existía un problema en el cual el cartel de finalización de reclamo seguía apareciendo al re-abrir un reclamo
