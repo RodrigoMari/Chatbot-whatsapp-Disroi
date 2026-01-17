@@ -430,7 +430,7 @@ app.post('/webhook', async (req, res) => {
                     ...estados[waId],
                     paso: 'factura',
                     tipo: ListTitle,
-                    area: ['DEPOSITO', 'GC'],
+                    area: ['VENTAS', 'GC'],
                 };
                 break;
 
@@ -442,7 +442,7 @@ app.post('/webhook', async (req, res) => {
                     ...estados[waId],
                     paso: 'factura',
                     tipo: ListTitle,
-                    area: ['DEPOSITO', 'GC'],
+                    area: ['VENTAS', 'GC'],
                 };
                 break;
 
