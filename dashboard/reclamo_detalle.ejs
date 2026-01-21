@@ -95,17 +95,15 @@
         </div>
 
         <div class="">
-          <label for="foto" class="form-label fw-bold">Agregar foto</label>
+          <label for="foto" class="form-label fw-bold">Agregar fotos</label>
           
-          <div id="drop-zone" class="drop-zone" tabindex="0">
-            <p id="drop-zone-text">Arrastra una imagen aquí, pégala, o haz clic para seleccionar</p>
+          <div id="drop-zone" class="drop-zone" tabindex="0" style="min-height: 150px; display: flex; flex-wrap: wrap; gap: 10px; padding: 15px; justify-content: center; align-items: center; border: 2px dashed #ccc; border-radius: 8px;">
+            <p id="drop-zone-text" class="m-0">Arrastra imágenes aquí, pégalas, o haz clic para seleccionar (MAXIMO DE 3)</p>
             
-            <img id="preview-image" src="" alt="Vista previa de la imagen">
-            
-            <button type="button" id="remove-image" class="btn-close" aria-label="Quitar imagen"></button>
+            <div id="preview-container" class="d-flex flex-wrap gap-2"></div>
           </div>
           
-          <input type="file" id="foto" name="foto" class="form-control" accept="image/*" style="display: none;">
+          <input type="file" id="foto" name="foto" class="form-control" accept="image/*" style="display: none;" multiple>
         </div>
 
         <input type="hidden" name="endpoint" id="endpoint-actual">
@@ -127,14 +125,14 @@
                 <strong>Paso <%= index + 1 %> - <%= p.tipo %>:</strong> <%= p.descripcion %>  
                 
                 <% if (p.foto) { %>
-                  <br>
-                  <!-- Foto clickeable -->
-                  <div class="mt-2">
-                    <img src="<%= p.foto %>" 
-                        alt="Foto del paso <%= index + 1 %>" 
-                        class="img-thumbnail cursor-pointer"
-                        style="max-width:200px; cursor:pointer;" 
-                        onclick="abrirModalFoto('<%= p.foto %>', 'Foto del paso <%= index + 1 %>')">
+                  <div class="mt-2 d-flex flex-wrap gap-2">
+                    <% p.foto.split(',').forEach(function(ruta, imgIndex) { %>
+                      <img src="<%= ruta %>" 
+                          alt="Foto" 
+                          class="img-thumbnail cursor-pointer"
+                          style="max-width:150px; cursor:pointer;" 
+                          onclick="abrirModalFoto('<%= ruta %>', 'Foto del paso')">
+                    <% }) %>
                   </div>
                 <% } %>
 
@@ -191,90 +189,83 @@
     document.addEventListener('DOMContentLoaded', () => {
       const dropZone = document.getElementById('drop-zone');
       const hiddenInput = document.getElementById('foto');
-      const previewImage = document.getElementById('preview-image');
+      const previewContainer = document.getElementById('preview-container');
       const dropZoneText = document.getElementById('drop-zone-text');
-      const removeButton = document.getElementById('remove-image');
 
-      // Función para manejar el archivo (ya sea soltado, pegado o seleccionado)
-      function handleFile(file) {
-        if (file && file.type.startsWith('image/')) {
-          const dataTransfer = new DataTransfer();
-          dataTransfer.items.add(file);
-          hiddenInput.files = dataTransfer.files;
+      let archivosActuales = [];
 
-          // Muestra la vista previa
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            previewImage.src = e.target.result;
-            previewImage.style.display = 'block';
-            removeButton.style.display = 'block';
-            dropZoneText.style.display = 'none';
-          };
-          reader.readAsDataURL(file);
+      function actualizarInterfaz() {
+        previewContainer.innerHTML = '';
+        const dt = new DataTransfer();
+
+        if (archivosActuales.length === 0) {
+          dropZoneText.style.display = 'block';
         } else {
-          alert("Por favor, selecciona o suelta solo archivos de imagen.");
+          dropZoneText.style.display = 'none';
+          
+          archivosActuales.forEach((file, index) => {
+            dt.items.add(file);
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const wrapper = document.createElement('div');
+              wrapper.className = 'position-relative m-2';
+              
+              wrapper.innerHTML = `
+                <img src="${e.target.result}" class="img-thumbnail shadow-sm" 
+                    style="width: 470px; height: 470px; object-fit: cover; border-radius: 10px;">
+                <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 shadow" 
+                        style="border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;"
+                        onclick="quitarArchivo(event, ${index})">&times;</button>
+              `;
+              previewContainer.appendChild(wrapper);
+            };
+            reader.readAsDataURL(file);
+          });
         }
+        hiddenInput.files = dt.files;
       }
 
-      // Función para resetear la zona
-      function resetDropZone() {
-        hiddenInput.value = '';
-        previewImage.src = '';
-        previewImage.style.display = 'none';
-        removeButton.style.display = 'none';
-        dropZoneText.style.display = 'block';
+      // Boton de sacar foto sin reabrir el selector de archivos
+      window.quitarArchivo = (event, index) => {
+        event.stopPropagation();
+        archivosActuales.splice(index, 1);
+        actualizarInterfaz();
+      };
+
+      function agregarArchivos(files) {
+        for (let file of files) {
+          if (file.type.startsWith('image/')) {
+            archivosActuales.push(file);
+          }
+        }
+        actualizarInterfaz();
       }
 
-      // Clic: Abre el selector de archivos
-      dropZone.addEventListener('click', () => {
-        hiddenInput.click();
-      });
+      dropZone.addEventListener('click', () => hiddenInput.click());
+      hiddenInput.addEventListener('change', () => agregarArchivos(hiddenInput.files));
 
-      // Change
-      hiddenInput.addEventListener('change', () => {
-        if (hiddenInput.files.length > 0) {
-          handleFile(hiddenInput.files[0]);
-        }
-      });
-
-      // Drag
-      dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('drag-over');
-      });
-
-      // Drag
-      dropZone.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('drag-over');
-      });
-
-      // Drop
-      dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('drag-over');
-        
-        if (e.dataTransfer.files.length > 0) {
-          handleFile(e.dataTransfer.files[0]);
-        }
-      });
-
-      // Paste
+      // Paste, Drag & Drop
+      dropZone.setAttribute('contenteditable', 'true');
       dropZone.addEventListener('paste', (e) => {
         e.preventDefault();
-        
-        if (e.clipboardData.files.length > 0) {
-          handleFile(e.clipboardData.files[0]);
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        for (let item of items) {
+          if (item.kind === 'file' && item.type.startsWith('image/')) {
+            agregarArchivos([item.getAsFile()]);
+          }
         }
       });
 
-      // Clic en "Quitar imagen"
-      removeButton.addEventListener('click', (e) => {
-        e.stopPropagation(); // Evita que se dispare el 'click' del dropZone
-        resetDropZone();
+      dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = '#0d6efd'; });
+      dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = '#ccc'; });
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#ccc';
+        if (e.dataTransfer.files.length > 0) { agregarArchivos(e.dataTransfer.files); }
       });
 
-      resetDropZone();
+      actualizarInterfaz();
     });
 
     document.getElementById("tipo").addEventListener("change", function() {
