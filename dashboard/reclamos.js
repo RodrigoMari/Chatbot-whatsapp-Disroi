@@ -294,12 +294,12 @@ router.get('/:id', async (req, res) => {
 });
 
 
-router.post('/:id/agregar-paso', upload.single('foto'), async (req, res) => {
+router.post('/:id/agregar-paso', upload.array('foto', 2), async (req, res) => {
   try {
     const { tipo, descripcion, endpoint, area, resolucion } = req.body;
     let fotoPaths = [];
-    if (req.file) {
-      fotoPaths = ['/uploads/' + req.file.filename];
+    if (req.files && req.files.length > 0) {
+      fotoPaths = req.files.map(file => '/uploads/' + file.filename);
     }
 
     await prisma.paso.create({
@@ -337,6 +337,7 @@ router.post('/:id/agregar-paso', upload.single('foto'), async (req, res) => {
     });
 
     await enviarNotificacion([area], `Tiene un nuevo paso de resolución de tipo ${tipo} en reclamo #${req.params.id}`);
+    res.redirect(`/reclamos/${req.params.id}`)
   } catch (err) {
     console.error(err);
     res.status(500).send('Error al guardar paso');
