@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.5e37fb9] - 21/01/25
+- Changed se modificó la cantidad máxima de fotos por paso de resolución a 3
+- Fixed ahora el box de fotos para los pasos del reclamo admite la opcion de pegar al hacer click derecho
+
 ## [1.1.e244f26] - 17/01/25
 - Changed ahora retiro de mercaderia y devoluciones deriva directamente a VENTAS
 
