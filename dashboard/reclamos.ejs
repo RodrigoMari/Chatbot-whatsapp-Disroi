@@ -207,7 +207,7 @@
               <th>Nombre</th>
               <th>Teléfono</th>
               <th>Tipo</th>
-              <th>Área responsable</th>
+              <th>Responsable</th>
               <th>Factura</th>
               <th>Vendedor</th>
               <th>Observación</th>
@@ -226,18 +226,20 @@
                 <td><%= r.maestro_21?.nombre || "sin nombre" %></td>
                 <td><%= /\d/.test(r.maestro_21?.telefono || "") ? r.maestro_21.telefono : "sin telefono" %></td>
                 <td><%= r.tipo %></td>
+                <td><%= r.nombreSupervisor || "Sin responsable" %></td>
                 <td>
-                 <% if (r.reclamo_area.length === 1) { 
-                      let areaClean = r.reclamo_area[0].area.replace(/[\[\]]/g, '');
-                  %>
-                    <span class="area-label area-<%= areaClean %>">
-                      <%= areaClean %>
-                    </span>
-                  <% } else if (r.reclamo_area.length > 1) { %>
+                  <% if (r.reclamo_area && r.reclamo_area.length > 0) { %>
                     <%- r.reclamo_area.map(a => {
-                          let areaClean = a.area.replace(/[\[\]]/g, '');
-                          return `<span class="area-label area-${areaClean}">${areaClean}</span>`;
-                        }).join('<br />') %>
+                        let areaClean = a.area.replace(/[\[\]]/g, '');
+                        let textoAMostrar = (areaClean.toUpperCase() === 'VENTAS') 
+                                            ? r.nombreSupervisor
+                                            : areaClean;
+
+                        // 3. Retornamos el badge con la clase correspondiente
+                        return `<span class="area-label area-${areaClean}">
+                                  ${textoAMostrar}
+                                </span>`;
+                    }).join('<br />') %>
                   <% } else { %>
                     <span class="text-muted">Sin área</span>
                   <% } %>

@@ -61,10 +61,14 @@ model suscripciones {
 }
 
 model vendedor {
-  id       Int     @id @default(autoincrement())
-  codigo   String  @unique(map: "codigo") @db.VarChar(2)
-  nombre   String  @db.VarChar(50)
-  telefono String? @db.VarChar(20)
+  id            Int         @id @default(autoincrement())
+  codigo        String      @unique(map: "codigo") @db.VarChar(2)
+  nombre        String      @db.VarChar(50)
+  id_supervisor Int?
+  telefono      String?     @db.VarChar(20)
+  supervisor    supervisor? @relation(fields: [id_supervisor], references: [id], onUpdate: Restrict, map: "fk_vendedor_supervisor")
+
+  @@index([id_supervisor], map: "fk_vendedor_supervisor")
 }
 
 model paso {
@@ -79,6 +83,12 @@ model paso {
   reclamo     reclamo   @relation(fields: [reclamoId], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_paso_reclamo")
 
   @@index([reclamoId], map: "reclamoId")
+}
+
+model supervisor {
+  id       Int        @id @default(autoincrement())
+  nombre   String     @db.VarChar(100)
+  vendedor vendedor[]
 }
 
 enum reclamo_estado {

@@ -104,10 +104,17 @@ router.get('/', async (req, res) => {
       reclamo_area: true
     },
   });
+
+  const vendedores = await prisma.vendedor.findMany({
+    include: { supervisor: true }
+  });
   
   const now = new Date();
 
   const reclamosSerializados = reclamos.map(r => {
+    const datosVendedor = vendedores.find(v => v.codigo === r.maestro_21?.vendedor_1);
+    const nombreSupervisor = datosVendedor?.supervisor?.nombre || "SIN SUPERVISOR";
+
     let truncatedText = r.observacion.slice(0, 100);
     if (r.observacion.length > 100) truncatedText += "...";
 
@@ -127,7 +134,8 @@ router.get('/', async (req, res) => {
       ...rSerialized,
       observacion: truncatedText,
       observacion_completa: r.observacion,
-      filaClase
+      filaClase,
+      nombreSupervisor: nombreSupervisor,
     };
   });
 
