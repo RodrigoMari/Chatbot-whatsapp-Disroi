@@ -71,46 +71,73 @@ async function marcarCompletado(id, endpoint, io, resolucion) {
 
 
 router.get('/', async (req, res) => {
-  const estado = req.query.estado;
-  const area = req.query.area;
-
-  //filtros
+  let { estado, area: responsable } = req.query;
   const filtro = {};
 
   if (estado) {
-    filtro.estado = estado;
+    const estadosArray = Array.isArray(estado) ? estado : [estado];
+    filtro.estado = { in: estadosArray };
   }
 
-  if (area) {
-    filtro.reclamo_area = {
-      some: {
-        area: area
+  if (responsable) {
+    const respArray = Array.isArray(responsable) ? responsable : [responsable];
+    const areasFisicasDisponibles = ["DEPOSITO", "ADMINISTRACION", "RRHH"];
+    const seleccionAreas = respArray.filter(r => areasFisicasDisponibles.includes(r));
+    const seleccionSupervisores = respArray.filter(r => !areasFisicasDisponibles.includes(r));
+
+    const condicionesResponsable = [];
+
+    // 1. Si eligió áreas físicas (se mantiene igual)
+    if (seleccionAreas.length > 0) {
+      condicionesResponsable.push({
+        reclamo_area: { some: { area: { in: seleccionAreas } } }
+      });
+    }
+
+    // 2. Si eligió supervisores (Ajustamos la lógica)
+    if (seleccionSupervisores.length > 0) {
+      const sups = await prisma.supervisor.findMany({
+        where: { nombre: { in: seleccionSupervisores } },
+        include: { vendedor: true }
+      });
+
+      if (sups.length > 0) {
+        sups.forEach(s => {
+          const codigos = s.vendedor.map(v => v.codigo);
+          // OJO ACÁ: Ahora pedimos que el vendedor sea de Lucas Y que el área sea VENTAS
+          condicionesResponsable.push({
+            AND: [
+              { maestro_21: { vendedor_1: { in: codigos } } },
+              { reclamo_area: { some: { area: { contains: 'VENTAS' } } } }
+            ]
+          });
+        });
       }
-    };
+    }
+
+    if (condicionesResponsable.length > 0) {
+      filtro.OR = condicionesResponsable;
+    } else {
+      filtro.id = 0; 
+    }
   }
 
-  const reclamos = await prisma.reclamo.findMany({
-    orderBy: { id: 'desc' },
-    where: filtro,
-    include: {
-      maestro_21: {
-        select: {
-          nombre: true,
-          vendedor_1: true,
-          vendedor_2: true,
-          telefono: true
-        }
+  // El resto del código (findMany, map de serialización) sigue igual...
+  const [reclamos, vendedores] = await Promise.all([
+    prisma.reclamo.findMany({
+      orderBy: { id: 'desc' },
+      where: filtro,
+      include: {
+        maestro_21: true,
+        reclamo_area: true
       },
-      reclamo_area: true
-    },
-  });
+    }),
+    prisma.vendedor.findMany({
+      include: { supervisor: true }
+    })
+  ]);
 
-  const vendedores = await prisma.vendedor.findMany({
-    include: { supervisor: true }
-  });
-  
   const now = new Date();
-
   const reclamosSerializados = reclamos.map(r => {
     const datosVendedor = vendedores.find(v => v.codigo === r.maestro_21?.vendedor_1);
     const nombreSupervisor = datosVendedor?.supervisor?.nombre || "SIN SUPERVISOR";
@@ -119,9 +146,6 @@ router.get('/', async (req, res) => {
     if (r.observacion.length > 100) truncatedText += "...";
 
     const reclamoFecha = new Date(r.fecha_tiempo);
-    const diffMs = now - reclamoFecha;
-    const diffHoras = diffMs / (1000 * 60 * 60);
-
     const horasHabiles = calcularHorasHabiles(reclamoFecha, now);
 
     let filaClase = '';
@@ -135,14 +159,14 @@ router.get('/', async (req, res) => {
       observacion: truncatedText,
       observacion_completa: r.observacion,
       filaClase,
-      nombreSupervisor: nombreSupervisor,
+      nombreSupervisor,
     };
   });
 
-   res.render('reclamos', {
+  res.render('reclamos', {
     reclamos: reclamosSerializados,
-    estadoSeleccionado: estado,
-    areaSeleccionada: area
+    estadoSeleccionado: estado || [],
+    areaSeleccionada: responsable || []
   });
 });
 
