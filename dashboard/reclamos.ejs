@@ -11,9 +11,9 @@
 <body class="text-dark">
 
   <div id="pre-subscribe" class="d-flex flex-column justify-content-center align-items-center vh-100">
-    <h2 class="mb-3 text-white text-center">Ingresa tu nombre y seleccioná tu área para continuar</h2>
-    <input type="text" id="nombre" class="form-control mb-3 mx-auto" placeholder="Ingresa tu nombre" style="width: 250px;">
-    <select id="area" class="form-select mb-3" style="width: 250px;">
+    <h2 class="mb-3 text-white">Ingresa tu nombre y seleccioná tu área para continuar</h2>
+    <input type="text" id="nombre" class="form-control mb-3 mx-auto" placeholder="Ingresa tu nombre" style="width: 200px;">
+    <select id="area" class="form-select mb-3" style="width: 200px;">
       <option value="">Selecciona tu área</option>
       <option value="VENTAS">VENTAS</option>
       <option value="DEPOSITO">DEPOSITO</option>
@@ -21,8 +21,98 @@
       <option value="RRHH">RRHH</option>
       <option value="GC">GC</option>
     </select>
-    <button id="subscribe" class="btn btn-primary rounded-pill px-4">Suscribirme</button>
+
+    <button id="subscribe" class="btn btn-primary">Suscribirme</button>
   </div>
+
+  <script>
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = atob(base64);
+      return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+    }
+
+    async function checkSubscription() {
+      try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (!registration) return false;
+        
+        const subscription = await registration.pushManager.getSubscription();
+        if (!subscription) return false;
+        
+        const res = await fetch(`/check-subscription?endpoint=${encodeURIComponent(subscription.endpoint)}`);
+        if (!res.ok) throw new Error('Error verificando suscripción');
+        const data = await res.json();
+        return data.exists;
+      } catch (err) {
+        console.error(err);
+        return false;
+      }
+    }
+
+    async function init() {
+      const exists = await checkSubscription();
+      if (exists) {
+        document.getElementById('pre-subscribe').classList.add('d-none');
+        document.getElementById('main-content').classList.remove('d-none');
+      }
+    }
+
+    async function subscribePush(areaSeleccionada, nombreSeleccionado) {
+      if (!('serviceWorker' in navigator && 'PushManager' in window)) {
+        alert('Tu navegador no soporta notificaciones push.');
+        return;
+      }
+
+      try {
+        const registration = await navigator.serviceWorker.register('/sw.js');
+        console.log('Service Worker registrado');
+
+        let subscription = await registration.pushManager.getSubscription();
+        if (!subscription) {
+          const response = await fetch('/vapidPublicKey');
+          if (!response.ok) throw new Error('No se pudo obtener la clave VAPID');
+
+          const vapidPublicKey = await response.text();
+          const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
+
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: convertedVapidKey
+          });
+        }
+
+        const res = await fetch('/subscribe', {
+          method: 'POST',
+          body: JSON.stringify({ subscription, area: areaSeleccionada, nombre: nombreSeleccionado }),
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!res.ok) throw new Error('Error al enviar la suscripción al servidor');
+
+        // Suscripción exitosa: ocultar pantalla de pre-suscripción y mostrar contenido principal
+        document.getElementById('pre-subscribe').classList.add('d-none');
+        document.getElementById('main-content').classList.remove('d-none');
+
+      } catch (err) {
+        console.error('Error durante la suscripción:', err);
+        alert('Ocurrió un error al suscribirse. Intenta nuevamente.');
+      }
+    }
+
+    document.getElementById('subscribe').addEventListener('click', () => {
+      const area = document.getElementById('area').value;
+      const nombre = document.getElementById('nombre').value;
+      if (!area || !nombre) {
+        alert('Por favor ingresa tu nombre y selecciona un área antes de suscribirte.');
+        return;
+      }
+      subscribePush(area, nombre);
+    });
+
+    window.addEventListener('load', init);
+  </script>
 
   <div id="main-content" class="d-none"> 
     <div class="container my-5">
@@ -283,13 +373,6 @@
     const socket = io();
     socket.on("estadoActualizado", () => location.reload());
 
-    // SUSCRIPCIÓN PUSH
-    document.getElementById('subscribe').addEventListener('click', () => {
-      const area = document.getElementById('area').value;
-      const nombre = document.getElementById('nombre').value;
-      if (!area || !nombre) { alert('Completá nombre y área'); return; }
-      // Aquí llama a tu función subscribePush original si la tienes
-    });
   </script>
 </body>
 </html>
