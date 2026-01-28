@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.8e35554] - 28/01/26
+- Changed ahora los reclamos son designados a un responsable particular en vez de al area de VENTAS
+- Changed se redujo la altura de cada reclamo para poder ver más de ellos en pantalla
+- Changed visuales de pop-ups de visualizacion de reclamo y de reporte para que sean más legibles
+- Changed ahora se pueden seleccionar más de un estado y un responsable en los filtros
+- Fixed existía un error en el filtro de reponsables que no dejaba filtrar de manera correcta
+
 ## [1.1.5e37fb9] - 21/01/26
 - Changed se modificó la cantidad máxima de fotos por paso de resolución a 3
 - Fixed ahora el box de fotos para los pasos del reclamo admite la opcion de pegar al hacer click derecho
