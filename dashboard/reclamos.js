@@ -74,11 +74,21 @@ router.get('/', async (req, res) => {
   let { estado, area: responsable } = req.query;
   const filtro = {};
 
+  // Separo por comas los valores del filtro
+  if (estado && typeof estado === 'string') {
+    estado = estado.split(',');
+  }
+  if (responsable && typeof responsable === 'string') {
+    responsable = responsable.split(',');
+  }
+
+  // Filtro de estado
   if (estado) {
     const estadosArray = Array.isArray(estado) ? estado : [estado];
     filtro.estado = { in: estadosArray };
   }
 
+  // Filtro de responsable
   if (responsable) {
     const respArray = Array.isArray(responsable) ? responsable : [responsable];
     const areasFisicasDisponibles = ["DEPOSITO", "ADMINISTRACION", "RRHH"];
@@ -87,14 +97,12 @@ router.get('/', async (req, res) => {
 
     const condicionesResponsable = [];
 
-    // 1. Si eligió áreas físicas (se mantiene igual)
     if (seleccionAreas.length > 0) {
       condicionesResponsable.push({
         reclamo_area: { some: { area: { in: seleccionAreas } } }
       });
     }
 
-    // 2. Si eligió supervisores (Ajustamos la lógica)
     if (seleccionSupervisores.length > 0) {
       const sups = await prisma.supervisor.findMany({
         where: { nombre: { in: seleccionSupervisores } },
@@ -104,7 +112,6 @@ router.get('/', async (req, res) => {
       if (sups.length > 0) {
         sups.forEach(s => {
           const codigos = s.vendedor.map(v => v.codigo);
-          // OJO ACÁ: Ahora pedimos que el vendedor sea de Lucas Y que el área sea VENTAS
           condicionesResponsable.push({
             AND: [
               { maestro_21: { vendedor_1: { in: codigos } } },
@@ -122,7 +129,6 @@ router.get('/', async (req, res) => {
     }
   }
 
-  // El resto del código (findMany, map de serialización) sigue igual...
   const [reclamos, vendedores] = await Promise.all([
     prisma.reclamo.findMany({
       orderBy: { id: 'desc' },
