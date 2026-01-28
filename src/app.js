@@ -20,6 +20,7 @@ const allowedIPs = [
     '186.182.43.30',
     '181.92.200.11',
     '190.189.46.161',
+    '190.19.242.226'
 ];
 
 app.set('trust proxy', true);
@@ -549,7 +550,7 @@ app.post('/webhook', async (req, res) => {
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../dashboard'));
-app.use(express.static(path.join(__dirname, '../dashboard')), checkIPWhitelist);
+app.use(express.static(path.join(__dirname, '../dashboard')), checkIPWhitelist); //checkIPWhitelist
 app.use(express.static(path.join(__dirname, '../public')));
 const reclamosRouter = require('../dashboard/reclamos.js');
 app.use('/reclamos', checkIPWhitelist, reclamosRouter); //checkIPWhitelist
