@@ -114,7 +114,7 @@
     window.addEventListener('load', init);
   </script>
 
-  <div id="main-content" class="d-none">
+  <div id="main-content" class="d-none"> <!-- none -->
     <div class="container my-5">
       
       <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
@@ -133,6 +133,16 @@
       </div>
 
       <form id="filter-form" method="GET" action="/reclamos" class="row g-3 mb-4 justify-content-end">
+        <div class="col-auto">
+          <div class="input-group">
+            <span class="input-group-text bg-dark border-secondary text-secondary rounded-start-pill">
+              <i class="bi bi-search"></i>
+            </span>
+            <input type="text" name="cliente" class="form-control bg-dark text-white border-secondary px-3" 
+                  placeholder="Cliente o Código..." value="<%= clienteSeleccionado %>">
+            <button class="btn btn-primary rounded-end-pill" type="submit">Ir</button>
+          </div>
+        </div>
         <div class="col-auto d-flex gap-2">
           <div class="dropdown">
             <button class="btn btn-dark border-secondary dropdown-toggle rounded-pill px-3" type="button" id="dropdownEstados" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
@@ -176,6 +186,9 @@
               <li><button type="submit" class="btn btn-primary btn-sm w-100 rounded-pill">Filtrar</button></li>
             </ul>
           </div>
+          <a href="/reclamos" class="row-auto btn btn-danger shadow-sm rounded-pill px-3 d-flex align-items-center" style="text-decoration: none;">
+            <i class="bi bi-trash3 me-1"></i> Borrar filtros
+          </a>
         </div>
       </form>
 
@@ -267,9 +280,11 @@
                   <% } %>
                 </td>
                 <td>
-                  <form action="/reclamos/<%= r.id %>" method="GET">
-                    <button type="submit" class="btn btn-outline-secondary btn-sm rounded-pill">Pasos</button>
-                  </form>
+                  <a href="#" 
+                    onclick="location.href='/reclamos/<%= r.id %>' + window.location.search; return false;" 
+                    class="btn btn-outline-secondary btn-sm rounded-pill">
+                    Pasos
+                  </a>
                 </td>
                 <td>
                   <button type="button" class="btn btn-success btn-sm rounded-pill"
@@ -378,13 +393,25 @@
       const formData = new FormData(this);
       const params = new URLSearchParams();
       const dataMap = {};
+
       formData.forEach((value, key) => {
-        if (!dataMap[key]) dataMap[key] = [];
-        if (value) dataMap[key].push(value);
+        if (!value) return; // Ignorar vacíos
+
+        if (key === 'cliente') {
+          // El cliente es búsqueda simple, no lleva comas usualmente
+          params.set(key, value);
+        } else {
+          // Estados y Áreas se siguen agrupando
+          if (!dataMap[key]) dataMap[key] = [];
+          dataMap[key].push(value);
+        }
       });
+
+      // Procesar los grupos (estados, áreas)
       for (const key in dataMap) {
         if (dataMap[key].length > 0) params.set(key, dataMap[key].join(','));
       }
+
       window.location.href = window.location.pathname + '?' + params.toString();
     });
 
