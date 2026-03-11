@@ -8,11 +8,21 @@
   <link rel="stylesheet" href="/style.css" />
 </head>
 
+<% 
+  // Construimos la query string de regreso
+  let backUrl = "/reclamos";
+  let params = new URLSearchParams();
+  if (filtros.estado) params.set('estado', filtros.estado);
+  if (filtros.area) params.set('area', filtros.area);
+  if (filtros.cliente) params.set('cliente', filtros.cliente);
+  if (params.toString()) backUrl += "?" + params.toString();
+%>
+
 <body class="text-dark">
   <div class="container my-5">
     <h1 class="text-center fw-bold mb-4">Detalle del Reclamo #<%= reclamo.id %></h1>
     <div class="mt-4 mb-3">
-      <a href="/reclamos" class="btn btn-outline-light">Volver</a>
+      <a href="<%= backUrl %>" class="btn btn-outline-light">Volver</a>
     </div>
 
     <!-- Datos básicos del reclamo -->
@@ -20,7 +30,7 @@
       <div class="card-body">
         <div class="row">
           <div class="col-md-6">
-            <p><strong>Cliente:</strong> <%= reclamo.maestro_21?.nombre || "sin nombre" %></p>
+            <p><strong>Cliente:</strong> <%= reclamo.maestro_21?.codigo || "sin codigo" %></p>
             <p><strong>Teléfono:</strong> <%= reclamo.maestro_21?.telefono || "sin telefono" %></p>
             <p><strong>Área responsable:</strong> <%- reclamo.reclamo_area.map(a => a.area).join(', ') %></p>
             <p><strong>Observación:</strong> <%= reclamo.observacion %></p>
@@ -159,7 +169,7 @@
 
     <!-- Botón volver -->
     <div class="mt-4 mb-3">
-      <a href="/reclamos" class="btn btn-outline-light">Volver</a>
+      <a href="<%= backUrl %>" class="btn btn-outline-light">Volver</a>
     </div>
   </div>
 

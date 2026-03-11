@@ -71,8 +71,8 @@ async function marcarCompletado(id, endpoint, io, resolucion) {
 
 
 router.get('/', async (req, res) => {
-  let { estado, area: responsable } = req.query;
-  const filtro = {};
+let { estado, area: responsable, cliente } = req.query;
+  const filtro = { AND: [] };
 
   // Separo por comas los valores del filtro
   if (estado && typeof estado === 'string') {
@@ -85,7 +85,16 @@ router.get('/', async (req, res) => {
   // Filtro de estado
   if (estado) {
     const estadosArray = Array.isArray(estado) ? estado : [estado];
-    filtro.estado = { in: estadosArray };
+    filtro.AND.push({ estado: { in: estadosArray } });
+  }
+
+  if (cliente) {
+    filtro.AND.push({
+      OR: [
+        { cliente: { contains: cliente } }, // Busca en el código de cliente
+        { maestro_21: { nombre: { contains: cliente } } } // Busca en el nombre
+      ]
+    });
   }
 
   // Filtro de responsable
@@ -123,16 +132,16 @@ router.get('/', async (req, res) => {
     }
 
     if (condicionesResponsable.length > 0) {
-      filtro.OR = condicionesResponsable;
-    } else {
-      filtro.id = 0; 
+        filtro.AND.push({ OR: condicionesResponsable });
     }
   }
+
+  const queryFinal = filtro.AND.length > 0 ? filtro : {};
 
   const [reclamos, vendedores] = await Promise.all([
     prisma.reclamo.findMany({
       orderBy: { id: 'desc' },
-      where: filtro,
+      where: queryFinal,
       include: {
         maestro_21: true,
         reclamo_area: true
@@ -172,7 +181,8 @@ router.get('/', async (req, res) => {
   res.render('reclamos', {
     reclamos: reclamosSerializados,
     estadoSeleccionado: estado || [],
-    areaSeleccionada: responsable || []
+    areaSeleccionada: responsable || [],
+    clienteSeleccionado: cliente || ""
   });
 });
 
@@ -322,13 +332,17 @@ router.get('/:id/pdf-stream', async (req, res) => {
 // Mostrar reclamo + pasos
 router.get('/:id', async (req, res) => {
   const id = parseInt(req.params.id);
+  const { estado, area, cliente } = req.query;
   const reclamo = await prisma.reclamo.findUnique({
     where: { id },
     include: { paso: true, maestro_21: true, reclamo_area: true }
   });
   if (!reclamo) return res.status(404).send("Reclamo no encontrado");
 
-  res.render("reclamo_detalle", { reclamo });
+  res.render("reclamo_detalle", { 
+    reclamo,
+    filtros: { estado, area, cliente } 
+  });
 });
 
 
