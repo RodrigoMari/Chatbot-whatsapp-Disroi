@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.c999ab1] - 11/03/26
+- Added ahora se puede filtrar por cliente (tanto código como nombre de cliente)
+- Added boton de borrar filtros
+- Fixed ahora cuando se vuelve a la pantalla principal de reclamos desde la de pasos, se mantienen los filtros
+
 ## [1.1.8e35554] - 28/01/26
 - Changed ahora los reclamos son designados a un responsable particular en vez de al area de VENTAS
 - Changed se redujo la altura de cada reclamo para poder ver más de ellos en pantalla
