@@ -14,7 +14,7 @@ async function enviarNotificacion(areas, mensaje = "Reclamo en estado pendiente"
     const payload = JSON.stringify({
         title: 'Nuevo reclamo',
         body: mensaje,
-        url: `${process.env.BASE_URL}/reclamos`
+        url: `${process.env.BASE_URL}`
     });
     
     const subs = await prisma.suscripciones.findMany({
