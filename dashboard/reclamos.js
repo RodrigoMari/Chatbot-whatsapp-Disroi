@@ -157,6 +157,9 @@ let { estado, area: responsable, cliente } = req.query;
     const datosVendedor = vendedores.find(v => v.codigo === r.maestro_21?.vendedor_1);
     const nombreSupervisor = datosVendedor?.supervisor?.nombre || "SIN SUPERVISOR";
 
+    const telefonoVendedor = datosVendedor?.telefono;
+    const telefonoCliente = "+" + r.maestro_21?.telefono;
+    const telefonoClienteConVendedor = telefonoCliente === telefonoVendedor ? `${telefonoCliente}  (${datosVendedor?.codigo})` : telefonoCliente;
     let truncatedText = r.observacion.slice(0, 100);
     if (r.observacion.length > 100) truncatedText += "...";
 
@@ -175,6 +178,7 @@ let { estado, area: responsable, cliente } = req.query;
       observacion_completa: r.observacion,
       filaClase,
       nombreSupervisor,
+      telefonoClienteConVendedor
     };
   });
 
@@ -182,7 +186,7 @@ let { estado, area: responsable, cliente } = req.query;
     reclamos: reclamosSerializados,
     estadoSeleccionado: estado || [],
     areaSeleccionada: responsable || [],
-    clienteSeleccionado: cliente || ""
+    clienteSeleccionado: cliente || "",
   });
 });
 

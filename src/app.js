@@ -559,12 +559,12 @@ app.post('/webhook', async (req, res) => {
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../dashboard'));
-app.use(express.static(path.join(__dirname, '../dashboard'))); //checkIPWhitelist
+app.use(express.static(path.join(__dirname, '../dashboard')), checkIPWhitelist); //checkIPWhitelist
 app.use(express.static(path.join(__dirname, '../public')));
 const reclamosRouter = require('../dashboard/reclamos.js');
 const { checkPrimeSync } = require('crypto');
-app.use('/reclamos', reclamosRouter); //checkIPWhitelist
-app.use('/reclamo_detalle', reclamosRouter); //checkIPWhitelist
+app.use('/reclamos', checkIPWhitelist, reclamosRouter); //checkIPWhitelist
+app.use('/reclamo_detalle', checkIPWhitelist, reclamosRouter); //checkIPWhitelist
 
 async function saveSubscription(sub) {
   await prisma.suscripciones.create({
@@ -618,11 +618,11 @@ app.get('/check-subscription', async (req, res) => {
   }
 });
 
-app.get('/vapidPublicKey', (req, res) => {
+app.get('/vapidPublicKey', checkIPWhitelist, (req, res) => {
   res.send(process.env.VAPID_PUBLIC_KEY);
 });
 
-app.post('/subscribe', express.json(), async (req, res) => {
+app.post('/subscribe', checkIPWhitelist, express.json(), async (req, res) => {
   const { subscription, area, nombre } = req.body;
   const clientIP = req.ip?.replace(/^::ffff:/, '') || null;
 
@@ -671,6 +671,6 @@ server.listen(3443, () => {
   console.log("Servidor HTTPS activo en puerto 3443");
 });
 
-app.listen(4000, () => {
+app.listen(3000, () => {
   console.log('Servidor HTTP en puerto 3000');
 });

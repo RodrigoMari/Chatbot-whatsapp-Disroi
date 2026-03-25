@@ -114,7 +114,7 @@
     window.addEventListener('load', init);
   </script>
 
-  <div id="main-content" class="d-block"> <!-- none -->
+  <div id="main-content" class="d-none"> <!-- none -->
     <div class="container my-5">
       
       <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
@@ -247,7 +247,7 @@
                 <td><%= r.id %></td>
                 <td><%= parseInt(r.cliente, 10) || "sin codigo" %></td>
                 <td class="text-start"><%= r.maestro_21?.nombre || "sin nombre" %></td>
-                <td><%= /\d/.test(r.maestro_21?.telefono || "") ? r.maestro_21.telefono : "-" %></td>
+                <td><%= r.telefonoClienteConVendedor || "-" %></td>
                 <td><%= r.tipo %></td>
                 <td>
                   <% if (r.reclamo_area && r.reclamo_area.length > 0) { %>
