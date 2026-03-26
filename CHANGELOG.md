@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.7f49675] - 26/03/26
+- Added ahora se ve el nombre del cliente y el motivo de resolución en la primera seccion de los pasos de resolución
+- Added ahora se oculta el formulario para "Agregar paso" si es que el reclamo esta resuelto. Si se quiere reabrir un reclamo, se deberá presionar un boton para hacer aparecer el formulario de "Agregar paso" nuevamente
+- Added ahora el reclamo tendrá, en el número telefónico con el que se registró el reclamo, el número de vendedor en el caso de que haya sido cargado desde su teléfono
+- Changed ahora las notificaciones para el area de ventas son enviadas unicamente al responsable del reclamo
+- Fixed se eliminó un subtítulo no deseado que no se visualizaba debido al color del fondo
+
 ## [1.1.c999ab1] - 11/03/26
 - Added ahora se puede filtrar por cliente (tanto código como nombre de cliente)
 - Added boton de borrar filtros
