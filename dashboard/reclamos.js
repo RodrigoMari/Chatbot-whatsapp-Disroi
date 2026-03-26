@@ -157,6 +157,9 @@ let { estado, area: responsable, cliente } = req.query;
     const datosVendedor = vendedores.find(v => v.codigo === r.maestro_21?.vendedor_1);
     const nombreSupervisor = datosVendedor?.supervisor?.nombre || "SIN SUPERVISOR";
 
+    const telefonoVendedor = datosVendedor?.telefono;
+    const telefonoCliente = "+" + r.maestro_21?.telefono;
+    const telefonoClienteConVendedor = telefonoCliente === telefonoVendedor ? `${telefonoCliente}  (${datosVendedor?.codigo})` : telefonoCliente;
     let truncatedText = r.observacion.slice(0, 100);
     if (r.observacion.length > 100) truncatedText += "...";
 
@@ -175,6 +178,7 @@ let { estado, area: responsable, cliente } = req.query;
       observacion_completa: r.observacion,
       filaClase,
       nombreSupervisor,
+      telefonoClienteConVendedor
     };
   });
 
@@ -182,7 +186,7 @@ let { estado, area: responsable, cliente } = req.query;
     reclamos: reclamosSerializados,
     estadoSeleccionado: estado || [],
     areaSeleccionada: responsable || [],
-    clienteSeleccionado: cliente || ""
+    clienteSeleccionado: cliente || "",
   });
 });
 
@@ -349,6 +353,7 @@ router.get('/:id', async (req, res) => {
 router.post('/:id/agregar-paso', upload.array('foto', 2), async (req, res) => {
   try {
     const { tipo, descripcion, endpoint, area, resolucion } = req.body;
+    const reclamoId = parseInt(req.params.id);
     let fotoPaths = [];
     if (req.files && req.files.length > 0) {
       fotoPaths = req.files.map(file => '/uploads/' + file.filename);
@@ -356,7 +361,7 @@ router.post('/:id/agregar-paso', upload.array('foto', 2), async (req, res) => {
 
     await prisma.paso.create({
       data: {
-        reclamoId: parseInt(req.params.id),
+        reclamoId: reclamoId,
         tipo: tipo,
         descripcion: descripcion,
         fecha: new Date(),
@@ -388,7 +393,14 @@ router.post('/:id/agregar-paso', upload.array('foto', 2), async (req, res) => {
       }
     });
 
-    await enviarNotificacion([area], `Tiene un nuevo paso de resolución de tipo ${tipo} en reclamo #${req.params.id}`);
+    const reclamoData = await prisma.reclamo.findUnique({ where: { id: reclamoId }, include: { maestro_21: true } });
+    const v = await prisma.vendedor.findFirst({ where: { codigo: reclamoData.maestro_21?.vendedor_1 }, include: { supervisor: true } });
+    const supervisorNombre = v?.supervisor?.nombre;
+
+    if (tipo !== "FINALIZACION" && reclamoData?.tipo !== "Nuevo cliente") {
+        const responsable = (area === 'VENTAS' && supervisorNombre) ? supervisorNombre : area;
+        await enviarNotificacion([responsable], reclamoData.id, `${responsable} - Nuevo paso "${tipo}" en reclamo #${reclamoId}: ${descripcion.substring(0, 50)}...`);
+    }
     res.redirect(`/reclamos/${req.params.id}`)
   } catch (err) {
     console.error(err);

@@ -31,13 +31,15 @@
         <div class="row">
           <div class="col-md-6">
             <p><strong>Cliente:</strong> <%= reclamo.maestro_21?.codigo || "sin codigo" %></p>
+            <p><strong>Nombre:</strong> <%= reclamo.maestro_21?.nombre || "sin nombre" %></p>
             <p><strong>Teléfono:</strong> <%= reclamo.maestro_21?.telefono || "sin telefono" %></p>
             <p><strong>Área responsable:</strong> <%- reclamo.reclamo_area.map(a => a.area).join(', ') %></p>
             <p><strong>Observación:</strong> <%= reclamo.observacion %></p>
           </div>
+
           <div class="col-md-6 d-flex justify-content-end align-items-center">
             <% if (reclamo.estado === 'COMPLETADO') { %>
-              <span class="badge fs-1">✅</span>
+              <em><%= reclamo.info_resolucion %></em> <span class="badge fs-1">✅</span>
             <% } else if (reclamo.estado === 'EN_PROCESO') { %>
               <span class="badge fs-1">🔄</span>
             <% } else if (reclamo.estado === 'PENDIENTE') { %>
@@ -49,7 +51,7 @@
     </div>
 
     <!-- Formulario para agregar paso -->
-    <div class="card mb-4">
+    <div id="formularioAgregarPaso" class="card mb-4" data-estado="<%= reclamo.estado %>">
       <div class="card-header text-white" style="background-color: #163b63;">
         ➕ Agregar paso de resolución
       </div>
@@ -121,6 +123,16 @@
       </form>
       </div>
     </div>
+
+    <% if (reclamo.estado === 'COMPLETADO') { %>
+    <div class="card mb-4">
+      <div class="card-body p-2">
+        <button id="reabrirBtn" class="btn btn-reabrir w-100">
+          Agregar paso adicional (Reabrir caso)
+        </button>
+      </div>
+    </div>
+    <% } %>
 
     <!-- Historial de pasos -->
     <div class="card shadow-sm">
@@ -312,6 +324,21 @@
     }
 
     setEndpointInputs();
+
+    // Ajuste de visibilidad inicial del formulario según estado
+    const formularioAgregarPaso = document.getElementById('formularioAgregarPaso');
+    if (formularioAgregarPaso && formularioAgregarPaso.dataset.estado === 'COMPLETADO') {
+      formularioAgregarPaso.style.display = 'none';
+    }
+
+    // Event listener para el botón reabrir caso
+    const reabrirBtn = document.getElementById('reabrirBtn');
+    if (reabrirBtn) {
+      reabrirBtn.addEventListener('click', function() {
+        document.getElementById('formularioAgregarPaso').style.display = 'block';
+        this.style.display = 'none';
+      });
+    }
 
   </script>
 

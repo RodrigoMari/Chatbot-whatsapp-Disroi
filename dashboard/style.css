@@ -205,6 +205,22 @@ form {
     background-color: #5a6268;
 }
 
+/* Botón Reabrir Caso */
+.btn-reabrir {
+  margin: 15px 0 18px;
+  background: linear-gradient(90deg, #1a4a7a 0%, #163b63 100%);
+  color: #ffffff;
+  border: 1px solid #133957;
+  font-weight: 700;
+  padding: 10px 14px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+}
+
+.btn-reabrir:hover {
+  background: linear-gradient(90deg, #1c558c 0%, #18466f 100%);
+  color: #ffffff;
+}
+
 /* Botones popup (solo para reclamos.ejs) */
 .popup-buttons {
   display: flex;

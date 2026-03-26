@@ -10,16 +10,19 @@ webpush.setVapidDetails(
 
 const prisma = new PrismaClient();
 
-async function enviarNotificacion(areas, mensaje = "Reclamo en estado pendiente", ) {
+async function enviarNotificacion(responsables, numReclamo, mensaje = "Reclamo en estado pendiente", ) {
     const payload = JSON.stringify({
         title: 'Nuevo reclamo',
         body: mensaje,
-        url: `${process.env.BASE_URL}`
+        url: `${process.env.BASE_URL}/${numReclamo}`
     });
     
     const subs = await prisma.suscripciones.findMany({
         where: {
-            area: { in: areas }
+            OR: [
+                { area: { in: responsables } },
+                { nombre: { in: responsables } }
+            ]
         }
     });
 
@@ -128,7 +131,7 @@ async function enviarNotificacionesVencidas() {
       - ${rangos["72"]} reclamos pendientes de más de 72h`;
 
       console.log("→ Enviando notificación:", mensaje);
-      await enviarNotificacion([area], mensaje);
+      await enviarNotificacion([area], 1, mensaje);
     }
   } catch (error) {
     console.error("❌ Error al enviar notificaciones:", error);

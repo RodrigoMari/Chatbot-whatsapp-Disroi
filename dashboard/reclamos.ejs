@@ -114,7 +114,7 @@
     window.addEventListener('load', init);
   </script>
 
-  <div id="main-content" class="d-none"> <!-- none -->
+  <div id="main-content" class="d-block"> <!-- none -->
     <div class="container my-5">
       
       <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
@@ -122,7 +122,6 @@
           <h1 class="h2 fw-bold text-white mb-0">
             <i class="bi bi-clipboard-data me-2 text-primary"></i>Gestión de Reclamos
           </h1>
-          <p class="text-muted small mb-0">Panel operativo para Ingeniería en Sistemas</p>
         </div>
         <div class="d-flex gap-2">
           <button id="reporte" class="btn btn-primary shadow-sm rounded-pill px-3">
@@ -247,7 +246,7 @@
                 <td><%= r.id %></td>
                 <td><%= parseInt(r.cliente, 10) || "sin codigo" %></td>
                 <td class="text-start"><%= r.maestro_21?.nombre || "sin nombre" %></td>
-                <td><%= /\d/.test(r.maestro_21?.telefono || "") ? r.maestro_21.telefono : "-" %></td>
+                <td><%= r.telefonoClienteConVendedor || "-" %></td>
                 <td><%= r.tipo %></td>
                 <td>
                   <% if (r.reclamo_area && r.reclamo_area.length > 0) { %>
